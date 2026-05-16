@@ -483,7 +483,7 @@ export default function App() {
                       <Sparkles className="text-blue-500 shrink-0" />
                       <div>
                         <h4 className="text-sm font-bold text-blue-900">Desafíos de Autómatas</h4>
-                        <p className="text-xs text-blue-800 mt-1">Selecciona un problema para resolverlo. La IA te guiará explicando la lógica de computación detrás de cada transición.</p>
+                        <p className="text-xs text-blue-800 mt-1">Selecciona un problema para resolverlo.</p>
                       </div>
                     </div>
                     
