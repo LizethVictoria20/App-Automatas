@@ -220,3 +220,8 @@ He agregado cada ejercicio como archivo separado en la carpeta `exercises/`:
 - [Multiplicación unaria](exercises/unary_multiplication.md)
 - [Multiplicación binaria](exercises/binary_multiplication.md)
 
+- [Multiplied Lengths](exercises/multiplied_lengths.md)
+- [Suma binaria](exercises/binary_addition.md)
+- [Multiplicación unaria](exercises/unary_multiplication.md)
+- [Multiplicación binaria](exercises/binary_multiplication.md)
+

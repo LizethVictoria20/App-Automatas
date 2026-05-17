@@ -1,13 +1,16 @@
-# Ejercicio: a^i b^j c^k con i*j = k
+# Exercise: Multiplied Lengths
 
-Descripción: Acepta cadenas de la forma a^i b^j c^k con i,j,k ≥ 1 y i * j = k.
+Decides the language { a^(i)b^(j)c^(k) | i*j = k and i,j,k ≥ 1 }.
 
-input: aabbbcccccc
+# (a's followed by b's then c's,
+# where the number of a's multiplied by the number of b's
+# equals the number of c's.)
+input: aabbbcccccc # try abc, b, aabcbc, aabcc, aabbbbcccccccc
 blank: ' '
 start state: start
 
 table:
-  # Comprobar la forma a^i b^j c^k con i,j,k ≥ 1.
+  # Check for the form a^(i)b^(j)c^(k) where i,j,k ≥ 1.
   start:  {        a: {R: a+}}
   a+:     {a: R,   b: {R: b+}}
   b+:     {b: R,   c: {R: c+}}
@@ -15,8 +18,12 @@ table:
   left:
     [a,b,c]: L
     ' ': {R: eachA}
-
-  # Luego comprobar que i*j = k.
+  # Then check that i*j = k.
+  #   The approach is two nested loops:
+  #   For each 'a':
+  #     For each 'b':
+  #       Mark one 'c'
+  #   At the end, check that all c's are marked.
   eachA:
     a: {write: ' ', R: eachB}
     b: {R: scan}
