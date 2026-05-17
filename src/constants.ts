@@ -125,6 +125,45 @@ export const EXAMPLES: Record<string, TMConfig> = {
     tape: ['a','a','b','b','b','c','c','c','c','c','c'],
     initialState: 'start',
     blankSymbol: ' ',
-    transitions: []
+    transitions: [
+      { currentState: 'start', readSymbol: 'a', writeSymbol: 'a', move: 'R', nextState: 'a+' },
+
+      { currentState: 'a+', readSymbol: 'a', writeSymbol: 'a', move: 'R', nextState: 'a+' },
+      { currentState: 'a+', readSymbol: 'b', writeSymbol: 'b', move: 'R', nextState: 'b+' },
+
+      { currentState: 'b+', readSymbol: 'b', writeSymbol: 'b', move: 'R', nextState: 'b+' },
+      { currentState: 'b+', readSymbol: 'c', writeSymbol: 'c', move: 'R', nextState: 'c+' },
+
+      { currentState: 'c+', readSymbol: 'c', writeSymbol: 'c', move: 'R', nextState: 'c+' },
+      { currentState: 'c+', readSymbol: ' ', writeSymbol: ' ', move: 'L', nextState: 'left' },
+
+      { currentState: 'left', readSymbol: 'a', writeSymbol: 'a', move: 'L', nextState: 'left' },
+      { currentState: 'left', readSymbol: 'b', writeSymbol: 'b', move: 'L', nextState: 'left' },
+      { currentState: 'left', readSymbol: 'c', writeSymbol: 'c', move: 'L', nextState: 'left' },
+      { currentState: 'left', readSymbol: ' ', writeSymbol: ' ', move: 'R', nextState: 'eachA' },
+
+      { currentState: 'eachA', readSymbol: 'a', writeSymbol: ' ', move: 'R', nextState: 'eachB' },
+      { currentState: 'eachA', readSymbol: 'b', writeSymbol: 'b', move: 'R', nextState: 'scan' },
+
+      { currentState: 'eachB', readSymbol: 'a', writeSymbol: 'a', move: 'R', nextState: 'eachB' },
+      { currentState: 'eachB', readSymbol: 'b', writeSymbol: 'B', move: 'R', nextState: 'markC' },
+      { currentState: 'eachB', readSymbol: 'C', writeSymbol: 'C', move: 'L', nextState: 'nextA' },
+
+      { currentState: 'markC', readSymbol: 'b', writeSymbol: 'b', move: 'R', nextState: 'markC' },
+      { currentState: 'markC', readSymbol: 'C', writeSymbol: 'C', move: 'R', nextState: 'markC' },
+      { currentState: 'markC', readSymbol: 'c', writeSymbol: 'C', move: 'L', nextState: 'nextB' },
+
+      { currentState: 'nextB', readSymbol: 'b', writeSymbol: 'b', move: 'L', nextState: 'nextB' },
+      { currentState: 'nextB', readSymbol: 'C', writeSymbol: 'C', move: 'L', nextState: 'nextB' },
+      { currentState: 'nextB', readSymbol: 'B', writeSymbol: 'B', move: 'R', nextState: 'eachB' },
+
+      { currentState: 'nextA', readSymbol: 'a', writeSymbol: 'a', move: 'L', nextState: 'nextA' },
+      { currentState: 'nextA', readSymbol: 'B', writeSymbol: 'b', move: 'L', nextState: 'nextA' },
+      { currentState: 'nextA', readSymbol: ' ', writeSymbol: ' ', move: 'R', nextState: 'eachA' },
+
+      { currentState: 'scan', readSymbol: 'b', writeSymbol: 'b', move: 'R', nextState: 'scan' },
+      { currentState: 'scan', readSymbol: 'C', writeSymbol: 'C', move: 'R', nextState: 'scan' },
+      { currentState: 'scan', readSymbol: ' ', writeSymbol: ' ', move: 'R', nextState: 'accept' },
+    ]
   }
 };
