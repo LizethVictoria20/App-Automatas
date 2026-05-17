@@ -625,115 +625,31 @@ export default function App() {
                 </div>
               )}
 
-              {activeTab === "exercises" && (
-                <div className="space-y-6">
-                  <div className="p-5 bg-linear-to-br from-indigo-50 via-blue-50 to-white border border-blue-100/70 rounded-xl flex gap-4 shadow-sm">
-                    <div className="w-10 h-10 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow">
-                      <Sparkles size={18} />
+                {activeTab === 'exercises' && (
+                  <div className="space-y-6">
+                    <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg flex gap-4">
+                      <Sparkles className="text-blue-500 shrink-0" />
+                      <div>
+                        <h4 className="text-sm font-bold text-blue-900">Desafíos de Autómatas</h4>
+                        <p className="text-xs text-blue-800 mt-1">Selecciona un problema para resolverlo.</p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <h4 className="text-sm font-bold text-slate-900">
-                        Desafíos de Autómatas
-                      </h4>
-                      <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                        Selecciona un ejercicio.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-3">
-                    {[
-                      { name: "Repetir 01", id: "repeat01" },
-                      { name: "Incremento Binario", id: "binaryIncrement" },
-                      {
-                        name: "Divisible por 3 (binario)",
-                        id: "divisibleBy3Binary",
-                      },
-                      { name: "Copiar 1s", id: "copyOnes" },
-                      {
-                        name: "Divisible por 3 (base 10)",
-                        id: "divisibleBy3Base10",
-                      },
-                      {
-                        name: "Tres cadenas de igual longitud (a^n b^n c^n)",
-                        id: "threeEqualLength",
-                      },
-                      { name: "Verificador de Palíndromos", id: "palindrome" },
-                      { name: "Suma Unaria", id: "unaryAddition" },
-                    ].map((ex, i) => {
-                      const meta = EXAMPLES[ex.id];
-                      const title = meta?.title ?? ex.name;
-                      const description = meta?.description;
-                      const isSelected = config === meta;
-
-                      return (
-                        <button
-                          key={ex.id}
+                    
+                    <div className="grid grid-cols-1 gap-3">
+                      {[{ name: 'Incremento Binario', id: 'binaryIncrement' }, { name: 'Verificador de Palíndromos', id: 'palindrome' }, { name: 'Suma Unaria', id: 'unary' }].map((ex, i) => (
+                        <button 
+                          key={i}
                           onClick={() => {
-                            const next = EXAMPLES[ex.id];
-                            if (!next) return;
-                            setConfig(next);
-                            setState({
-                              tape: [...next.tape],
-                              headIndex: 0,
-                              currentState: next.initialState,
-                              isRunning: false,
-                              stepCount: 0,
-                              isHalted: false,
-                            });
-                            setExplanation(next.description ?? "");
+                            if (ex.id === 'binaryIncrement') setConfig(EXAMPLES.binaryIncrement);
+                            if (ex.id === 'palindrome') setConfig(EXAMPLES.palindrome);
+                            if (ex.id === 'unary') setConfig(EXAMPLES.unaryAddition);
+                            reset();
                           }}
-                          className={cn(
-                            "group relative w-full text-left rounded-xl border p-4 transition-all",
-                            "bg-white/80 hover:bg-white",
-                            "border-black/5 hover:border-black/10",
-                            "shadow-sm hover:shadow-md",
-                            "focus:outline-none focus:ring-2 focus:ring-black/30",
-                            isSelected &&
-                              "ring-2 ring-black/80 border-black/10 shadow-md",
-                          )}
+                          className="flex items-center justify-between p-4 border border-black/5 rounded-lg hover:bg-black hover:text-white transition-all group"
                         >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold text-slate-900 truncate">
-                                  {title}
-                                </span>
-                                {isSelected && (
-                                  <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full bg-black text-white">
-                                    Activo
-                                  </span>
-                                )}
-                              </div>
-                              {description && (
-                                <p className="mt-1 text-[12px] leading-relaxed text-slate-600">
-                                  {description}
-                                </p>
-                              )}
-                              <div className="mt-3 flex items-center gap-2">
-                                <span className="text-[10px] uppercase tracking-widest text-slate-400">
-                                  Ejercicio {i + 1}
-                                </span>
-                                <span className="h-1 w-1 rounded-full bg-slate-300" />
-                                <span className="text-[10px] font-mono text-slate-400">
-                                  Estado inicial: {meta?.initialState}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div
-                              className={cn(
-                                "mt-1 text-slate-400 transition-all",
-                                "group-hover:text-slate-900",
-                                "group-hover:translate-x-0.5",
-                              )}
-                            >
-                              <ChevronRight />
-                            </div>
-                          </div>
-
-                          <div className="pointer-events-none absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div className="absolute inset-0 rounded-xl bg-linear-to-r from-transparent via-black/3 to-transparent" />
+                          <div className="text-left">
+                            <span className="block text-sm font-medium">{ex.name}</span>
+                            <span className="text-[10px] uppercase tracking-widest opacity-50">Set de Problemas {i+1}</span>
                           </div>
                         </button>
                       );
@@ -820,30 +736,19 @@ export default function App() {
               <div className="p-4 rounded-lg bg-[#F8F8F7] border border-black/5">
                 <h4 className="text-xs font-bold mb-1">Máquina de Estados</h4>
                 <p className="text-[11px] leading-relaxed text-black/60">
-                  Una máquina de Turing es un modelo matemático de computación
-                  que manipula símbolos en una cinta de acuerdo con una tabla de
-                  reglas.
+                  Una máquina de Turing es un modelo matemático de computación que manipula símbolos en una cinta de acuerdo con una tabla de reglas.
                 </p>
               </div>
               <div className="p-4 rounded-lg bg-[#F8F8F7] border border-black/5">
-                <h4 className="text-xs font-bold mb-1">
-                  Problema de la Parada
-                </h4>
+                <h4 className="text-xs font-bold mb-1">Problema de la Parada</h4>
                 <p className="text-[11px] leading-relaxed text-black/60">
-                  No existe un algoritmo general que pueda determinar si un
-                  programa se detendrá eventualmente o se ejecutará para
-                  siempre. Esta máquina explora ese límite.
+                  No existe un algoritmo general que pueda determinar si un programa se detendrá eventualmente o se ejecutará para siempre. Esta máquina explora ese límite.
                 </p>
               </div>
               <div className="p-4 rounded-lg bg-[#F8F8F7] border border-black/5">
-                <h4 className="text-xs font-bold mb-1">
-                  Estado de Parada (Halt)
-                </h4>
+                <h4 className="text-xs font-bold mb-1">Estado de Parada (Halt)</h4>
                 <p className="text-[11px] leading-relaxed text-black/60">
-                  Es el estado terminal donde la máquina finaliza su ejecución.
-                  Indica que el cómputo ha terminado, ya sea porque se llegó a
-                  una solución (Aceptar/Rechazar) o porque no existen más reglas
-                  aplicables para la configuración actual.
+                  Es el estado terminal donde la máquina finaliza su ejecución. Indica que el cómputo ha terminado, ya sea porque se llegó a una solución (Aceptar/Rechazar) o porque no existen más reglas aplicables para la configuración actual.
                 </p>
               </div>
             </div>
