@@ -101,4 +101,36 @@ export const EXAMPLES: Record<string, TMConfig> = {
       // State H (Halt)
     ],
   }
+  ,
+  // New exercises added from EXERCISES.md
+  abcProduct: {
+    tape: ['a','a','b','b','b','c','c','c','c','c','c'],
+    initialState: 'start',
+    blankSymbol: ' ',
+    transitions: []
+  },
+  binaryAddition: {
+    tape: ['1','0','1','1','+','1','1','0','0','1'],
+    initialState: 'right',
+    blankSymbol: ' ',
+    transitions: []
+  },
+  fibonacciPrompt: {
+    tape: ['1',' ', '0'],
+    initialState: 'start',
+    blankSymbol: ' ',
+    transitions: []
+  },
+  unaryMultiplication: {
+    tape: ['|','|','*','|','|','|'],
+    initialState: 'eachA',
+    blankSymbol: ' ',
+    transitions: []
+  },
+  binaryMultiplication: {
+    tape: ['1','1','*','1','0','1'],
+    initialState: 'start',
+    blankSymbol: ' ',
+    transitions: []
+  }
 };

@@ -636,7 +636,7 @@ export default function App() {
                     </div>
                     
                     <div className="grid grid-cols-1 gap-3">
-                      {[{ name: 'Incremento Binario', id: 'binaryIncrement' }, { name: 'Verificador de Palíndromos', id: 'palindrome' }, { name: 'Suma Unaria', id: 'unary' }, { name: '3-state Busy Beaver', id: 'exercise12' }].map((ex, i) => (
+                      {[{ name: 'Incremento Binario', id: 'binaryIncrement' }, { name: 'Verificador de Palíndromos', id: 'palindrome' }, { name: 'Suma Unaria', id: 'unary' }, { name: '3-state Busy Beaver', id: 'exercise12' }, { name: '4-State Busy Beaver', id: 'busyBeaver4State' }, { name: 'Powers of Two', id: 'powersOfTwo' }].map((ex, i) => (
                         <button 
                           key={i}
                           onClick={() => {
@@ -644,6 +644,8 @@ export default function App() {
                             if (ex.id === 'palindrome') setConfig(EXAMPLES.palindrome);
                             if (ex.id === 'unary') setConfig(EXAMPLES.unaryAddition);
                             if (ex.id === 'exercise12') setConfig(EXAMPLES.exercise12);
+                            if (ex.id === 'busyBeaver4State') setConfig(EXAMPLES.busyBeaver4State);
+                            if (ex.id === 'powersOfTwo') setConfig(EXAMPLES.powersOfTwo);
                             reset();
                           }}
                           className="flex items-center justify-between p-4 border border-black/5 rounded-lg hover:bg-black hover:text-white transition-all group"
