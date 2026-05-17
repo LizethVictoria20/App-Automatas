@@ -636,11 +636,7 @@ export default function App() {
                     </div>
                     
                     <div className="grid grid-cols-1 gap-3">
-<<<<<<< HEAD
-                      {[{ name: 'Incremento Binario', id: 'binaryIncrement' }, { name: 'Verificador de Palíndromos', id: 'palindrome' }, { name: 'Suma Unaria', id: 'unary' }, { name: '3-state Busy Beaver', id: 'exercise12' }, { name: '4-State Busy Beaver', id: 'busyBeaver4State' }, { name: 'Powers of Two', id: 'powersOfTwo' }].map((ex, i) => (
-=======
                       {[{ name: 'Incremento Binario', id: 'binaryIncrement' }, { name: 'Verificador de Palíndromos', id: 'palindrome' }, { name: 'Suma Unaria', id: 'unary' }, { name: '3-state Busy Beaver', id: 'exercise12' }, { name: '4-State Busy Beaver', id: 'busyBeaver4State' }, { name: 'Powers of Two', id: 'powersOfTwo' }, { name: 'Multiplied Lengths', id: 'multipliedLengths' }, { name: 'Suma Binaria', id: 'binaryAddition' }, { name: 'Multiplicación Unaria', id: 'unaryMultiplication' }, { name: 'Multiplicación Binaria', id: 'binaryMultiplication' }].map((ex, i) => (
->>>>>>> 6163887 (Replace abc/fibonacci exercises with Multiplied Lengths; update UI and docs)
                         <button 
                           key={i}
                           onClick={() => {

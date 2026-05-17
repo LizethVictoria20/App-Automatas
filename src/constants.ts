@@ -107,19 +107,192 @@ export const EXAMPLES: Record<string, TMConfig> = {
     tape: ['1','0','1','1','+','1','1','0','0','1'],
     initialState: 'right',
     blankSymbol: ' ',
-    transitions: []
+    transitions: [
+      { currentState: 'right', readSymbol: '0', writeSymbol: '0', move: 'R', nextState: 'right' },
+      { currentState: 'right', readSymbol: '1', writeSymbol: '1', move: 'R', nextState: 'right' },
+      { currentState: 'right', readSymbol: '+', writeSymbol: '+', move: 'R', nextState: 'right' },
+      { currentState: 'right', readSymbol: ' ', writeSymbol: ' ', move: 'L', nextState: 'read' },
+
+      { currentState: 'read', readSymbol: '0', writeSymbol: 'c', move: 'L', nextState: 'have0' },
+      { currentState: 'read', readSymbol: '1', writeSymbol: 'c', move: 'L', nextState: 'have1' },
+      { currentState: 'read', readSymbol: '+', writeSymbol: ' ', move: 'L', nextState: 'rewrite' },
+
+      { currentState: 'have0', readSymbol: '0', writeSymbol: '0', move: 'L', nextState: 'have0' },
+      { currentState: 'have0', readSymbol: '1', writeSymbol: '1', move: 'L', nextState: 'have0' },
+      { currentState: 'have0', readSymbol: '+', writeSymbol: '+', move: 'L', nextState: 'add0' },
+
+      { currentState: 'have1', readSymbol: '0', writeSymbol: '0', move: 'L', nextState: 'have1' },
+      { currentState: 'have1', readSymbol: '1', writeSymbol: '1', move: 'L', nextState: 'have1' },
+      { currentState: 'have1', readSymbol: '+', writeSymbol: '+', move: 'L', nextState: 'add1' },
+
+      { currentState: 'add0', readSymbol: '0', writeSymbol: 'O', move: 'R', nextState: 'back0' },
+      { currentState: 'add0', readSymbol: ' ', writeSymbol: 'O', move: 'R', nextState: 'back0' },
+      { currentState: 'add0', readSymbol: '1', writeSymbol: 'I', move: 'R', nextState: 'back0' },
+      { currentState: 'add0', readSymbol: 'O', writeSymbol: 'O', move: 'L', nextState: 'add0' },
+      { currentState: 'add0', readSymbol: 'I', writeSymbol: 'I', move: 'L', nextState: 'add0' },
+
+      { currentState: 'add1', readSymbol: '0', writeSymbol: 'I', move: 'R', nextState: 'back1' },
+      { currentState: 'add1', readSymbol: ' ', writeSymbol: 'I', move: 'R', nextState: 'back1' },
+      { currentState: 'add1', readSymbol: '1', writeSymbol: 'O', move: 'L', nextState: 'carry' },
+      { currentState: 'add1', readSymbol: 'O', writeSymbol: 'O', move: 'L', nextState: 'add1' },
+      { currentState: 'add1', readSymbol: 'I', writeSymbol: 'I', move: 'L', nextState: 'add1' },
+
+      { currentState: 'carry', readSymbol: '0', writeSymbol: '1', move: 'R', nextState: 'back1' },
+      { currentState: 'carry', readSymbol: ' ', writeSymbol: '1', move: 'R', nextState: 'back1' },
+      { currentState: 'carry', readSymbol: '1', writeSymbol: '0', move: 'L', nextState: 'carry' },
+      { currentState: 'carry', readSymbol: 'O', writeSymbol: 'O', move: 'L', nextState: 'carry' },
+      { currentState: 'carry', readSymbol: 'I', writeSymbol: 'I', move: 'L', nextState: 'carry' },
+
+      { currentState: 'back0', readSymbol: '0', writeSymbol: '0', move: 'R', nextState: 'back0' },
+      { currentState: 'back0', readSymbol: '1', writeSymbol: '1', move: 'R', nextState: 'back0' },
+      { currentState: 'back0', readSymbol: 'O', writeSymbol: 'O', move: 'R', nextState: 'back0' },
+      { currentState: 'back0', readSymbol: 'I', writeSymbol: 'I', move: 'R', nextState: 'back0' },
+      { currentState: 'back0', readSymbol: '+', writeSymbol: '+', move: 'R', nextState: 'back0' },
+      { currentState: 'back0', readSymbol: 'c', writeSymbol: '0', move: 'L', nextState: 'read' },
+
+      { currentState: 'back1', readSymbol: '0', writeSymbol: '0', move: 'R', nextState: 'back1' },
+      { currentState: 'back1', readSymbol: '1', writeSymbol: '1', move: 'R', nextState: 'back1' },
+      { currentState: 'back1', readSymbol: 'O', writeSymbol: 'O', move: 'R', nextState: 'back1' },
+      { currentState: 'back1', readSymbol: 'I', writeSymbol: 'I', move: 'R', nextState: 'back1' },
+      { currentState: 'back1', readSymbol: '+', writeSymbol: '+', move: 'R', nextState: 'back1' },
+      { currentState: 'back1', readSymbol: 'c', writeSymbol: '1', move: 'L', nextState: 'read' },
+
+      { currentState: 'rewrite', readSymbol: 'O', writeSymbol: '0', move: 'L', nextState: 'rewrite' },
+      { currentState: 'rewrite', readSymbol: 'I', writeSymbol: '1', move: 'L', nextState: 'rewrite' },
+      { currentState: 'rewrite', readSymbol: '0', writeSymbol: '0', move: 'L', nextState: 'rewrite' },
+      { currentState: 'rewrite', readSymbol: '1', writeSymbol: '1', move: 'L', nextState: 'rewrite' },
+      { currentState: 'rewrite', readSymbol: ' ', writeSymbol: ' ', move: 'R', nextState: 'done' },
+    ],
   },
   unaryMultiplication: {
     tape: ['|','|','*','|','|','|'],
     initialState: 'eachA',
     blankSymbol: ' ',
-    transitions: []
+    transitions: [
+      { currentState: 'eachA', readSymbol: '|', writeSymbol: ' ', move: 'R', nextState: 'toB' },
+      { currentState: 'eachA', readSymbol: '*', writeSymbol: '*', move: 'R', nextState: 'skip' },
+
+      { currentState: 'toB', readSymbol: '|', writeSymbol: '|', move: 'R', nextState: 'toB' },
+      { currentState: 'toB', readSymbol: '*', writeSymbol: '*', move: 'R', nextState: 'eachB' },
+
+      { currentState: 'nextA', readSymbol: ' ', writeSymbol: '|', move: 'R', nextState: 'eachA' },
+      { currentState: 'nextA', readSymbol: '|', writeSymbol: '|', move: 'L', nextState: 'nextA' },
+      { currentState: 'nextA', readSymbol: '*', writeSymbol: '*', move: 'L', nextState: 'nextA' },
+
+      { currentState: 'skip', readSymbol: '|', writeSymbol: '|', move: 'R', nextState: 'skip' },
+      { currentState: 'skip', readSymbol: ' ', writeSymbol: ' ', move: 'R', nextState: 'done' },
+
+      { currentState: 'eachB', readSymbol: ' ', writeSymbol: ' ', move: 'L', nextState: 'nextA' },
+      { currentState: 'eachB', readSymbol: '|', writeSymbol: ' ', move: 'R', nextState: 'sep' },
+
+      { currentState: 'sep', readSymbol: ' ', writeSymbol: ' ', move: 'R', nextState: 'add' },
+      { currentState: 'sep', readSymbol: '|', writeSymbol: '|', move: 'R', nextState: 'sep' },
+
+      { currentState: 'add', readSymbol: ' ', writeSymbol: '|', move: 'L', nextState: 'sepL' },
+      { currentState: 'add', readSymbol: '|', writeSymbol: '|', move: 'R', nextState: 'add' },
+
+      { currentState: 'sepL', readSymbol: ' ', writeSymbol: ' ', move: 'L', nextState: 'nextB' },
+      { currentState: 'sepL', readSymbol: '|', writeSymbol: '|', move: 'L', nextState: 'sepL' },
+
+      { currentState: 'nextB', readSymbol: ' ', writeSymbol: '|', move: 'R', nextState: 'eachB' },
+      { currentState: 'nextB', readSymbol: '|', writeSymbol: '|', move: 'L', nextState: 'nextB' },
+    ],
   },
   binaryMultiplication: {
     tape: ['1','1','*','1','0','1'],
     initialState: 'start',
     blankSymbol: ' ',
-    transitions: []
+    transitions: [
+      { currentState: 'start', readSymbol: '0', writeSymbol: '0', move: 'L', nextState: 'init' },
+      { currentState: 'start', readSymbol: '1', writeSymbol: '1', move: 'L', nextState: 'init' },
+
+      { currentState: 'init', readSymbol: ' ', writeSymbol: '+', move: 'R', nextState: 'right' },
+
+      { currentState: 'right', readSymbol: '0', writeSymbol: '0', move: 'R', nextState: 'right' },
+      { currentState: 'right', readSymbol: '1', writeSymbol: '1', move: 'R', nextState: 'right' },
+      { currentState: 'right', readSymbol: '*', writeSymbol: '*', move: 'R', nextState: 'right' },
+      { currentState: 'right', readSymbol: ' ', writeSymbol: ' ', move: 'L', nextState: 'readB' },
+
+      { currentState: 'readB', readSymbol: '0', writeSymbol: ' ', move: 'L', nextState: 'doubleL' },
+      { currentState: 'readB', readSymbol: '1', writeSymbol: ' ', move: 'L', nextState: 'addA' },
+
+      { currentState: 'addA', readSymbol: '0', writeSymbol: '0', move: 'L', nextState: 'addA' },
+      { currentState: 'addA', readSymbol: '1', writeSymbol: '1', move: 'L', nextState: 'addA' },
+      { currentState: 'addA', readSymbol: '*', writeSymbol: '*', move: 'L', nextState: 'read' },
+
+      { currentState: 'doubleL', readSymbol: '0', writeSymbol: '0', move: 'L', nextState: 'doubleL' },
+      { currentState: 'doubleL', readSymbol: '1', writeSymbol: '1', move: 'L', nextState: 'doubleL' },
+      { currentState: 'doubleL', readSymbol: '*', writeSymbol: '0', move: 'R', nextState: 'shift' },
+
+      { currentState: 'double', readSymbol: '0', writeSymbol: '0', move: 'R', nextState: 'double' },
+      { currentState: 'double', readSymbol: '1', writeSymbol: '1', move: 'R', nextState: 'double' },
+      { currentState: 'double', readSymbol: '+', writeSymbol: '+', move: 'R', nextState: 'double' },
+      { currentState: 'double', readSymbol: '*', writeSymbol: '0', move: 'R', nextState: 'shift' },
+
+      { currentState: 'shift', readSymbol: '0', writeSymbol: '*', move: 'R', nextState: 'shift0' },
+      { currentState: 'shift', readSymbol: '1', writeSymbol: '*', move: 'R', nextState: 'shift1' },
+      { currentState: 'shift', readSymbol: ' ', writeSymbol: ' ', move: 'L', nextState: 'tidy' },
+
+      { currentState: 'shift0', readSymbol: '0', writeSymbol: '0', move: 'R', nextState: 'shift0' },
+      { currentState: 'shift0', readSymbol: '1', writeSymbol: '0', move: 'R', nextState: 'shift1' },
+      { currentState: 'shift0', readSymbol: ' ', writeSymbol: '0', move: 'R', nextState: 'right' },
+
+      { currentState: 'shift1', readSymbol: '0', writeSymbol: '1', move: 'R', nextState: 'shift0' },
+      { currentState: 'shift1', readSymbol: '1', writeSymbol: '1', move: 'R', nextState: 'shift1' },
+      { currentState: 'shift1', readSymbol: ' ', writeSymbol: '1', move: 'R', nextState: 'right' },
+
+      { currentState: 'tidy', readSymbol: '0', writeSymbol: ' ', move: 'L', nextState: 'tidy' },
+      { currentState: 'tidy', readSymbol: '1', writeSymbol: ' ', move: 'L', nextState: 'tidy' },
+      { currentState: 'tidy', readSymbol: '+', writeSymbol: ' ', move: 'L', nextState: 'accept' },
+
+      { currentState: 'read', readSymbol: '0', writeSymbol: 'c', move: 'L', nextState: 'have0' },
+      { currentState: 'read', readSymbol: '1', writeSymbol: 'c', move: 'L', nextState: 'have1' },
+      { currentState: 'read', readSymbol: '+', writeSymbol: '+', move: 'L', nextState: 'rewrite' },
+
+      { currentState: 'have0', readSymbol: '0', writeSymbol: '0', move: 'L', nextState: 'have0' },
+      { currentState: 'have0', readSymbol: '1', writeSymbol: '1', move: 'L', nextState: 'have0' },
+      { currentState: 'have0', readSymbol: '+', writeSymbol: '+', move: 'L', nextState: 'add0' },
+
+      { currentState: 'have1', readSymbol: '0', writeSymbol: '0', move: 'L', nextState: 'have1' },
+      { currentState: 'have1', readSymbol: '1', writeSymbol: '1', move: 'L', nextState: 'have1' },
+      { currentState: 'have1', readSymbol: '+', writeSymbol: '+', move: 'L', nextState: 'add1' },
+
+      { currentState: 'add0', readSymbol: '0', writeSymbol: 'O', move: 'R', nextState: 'back0' },
+      { currentState: 'add0', readSymbol: ' ', writeSymbol: 'O', move: 'R', nextState: 'back0' },
+      { currentState: 'add0', readSymbol: '1', writeSymbol: 'I', move: 'R', nextState: 'back0' },
+      { currentState: 'add0', readSymbol: 'O', writeSymbol: 'O', move: 'L', nextState: 'add0' },
+      { currentState: 'add0', readSymbol: 'I', writeSymbol: 'I', move: 'L', nextState: 'add0' },
+
+      { currentState: 'add1', readSymbol: '0', writeSymbol: 'I', move: 'R', nextState: 'back1' },
+      { currentState: 'add1', readSymbol: ' ', writeSymbol: 'I', move: 'R', nextState: 'back1' },
+      { currentState: 'add1', readSymbol: '1', writeSymbol: 'O', move: 'L', nextState: 'carry' },
+      { currentState: 'add1', readSymbol: 'O', writeSymbol: 'O', move: 'L', nextState: 'add1' },
+      { currentState: 'add1', readSymbol: 'I', writeSymbol: 'I', move: 'L', nextState: 'add1' },
+
+      { currentState: 'carry', readSymbol: '0', writeSymbol: '1', move: 'R', nextState: 'back1' },
+      { currentState: 'carry', readSymbol: ' ', writeSymbol: '1', move: 'R', nextState: 'back1' },
+      { currentState: 'carry', readSymbol: '1', writeSymbol: '0', move: 'L', nextState: 'carry' },
+
+      { currentState: 'back0', readSymbol: '0', writeSymbol: '0', move: 'R', nextState: 'back0' },
+      { currentState: 'back0', readSymbol: '1', writeSymbol: '1', move: 'R', nextState: 'back0' },
+      { currentState: 'back0', readSymbol: 'O', writeSymbol: 'O', move: 'R', nextState: 'back0' },
+      { currentState: 'back0', readSymbol: 'I', writeSymbol: 'I', move: 'R', nextState: 'back0' },
+      { currentState: 'back0', readSymbol: '+', writeSymbol: '+', move: 'R', nextState: 'back0' },
+      { currentState: 'back0', readSymbol: 'c', writeSymbol: '0', move: 'L', nextState: 'read' },
+
+      { currentState: 'back1', readSymbol: '0', writeSymbol: '0', move: 'R', nextState: 'back1' },
+      { currentState: 'back1', readSymbol: '1', writeSymbol: '1', move: 'R', nextState: 'back1' },
+      { currentState: 'back1', readSymbol: 'O', writeSymbol: 'O', move: 'R', nextState: 'back1' },
+      { currentState: 'back1', readSymbol: 'I', writeSymbol: 'I', move: 'R', nextState: 'back1' },
+      { currentState: 'back1', readSymbol: '+', writeSymbol: '+', move: 'R', nextState: 'back1' },
+      { currentState: 'back1', readSymbol: 'c', writeSymbol: '1', move: 'L', nextState: 'read' },
+
+      { currentState: 'rewrite', readSymbol: 'O', writeSymbol: '0', move: 'L', nextState: 'rewrite' },
+      { currentState: 'rewrite', readSymbol: 'I', writeSymbol: '1', move: 'L', nextState: 'rewrite' },
+      { currentState: 'rewrite', readSymbol: '0', writeSymbol: '0', move: 'L', nextState: 'rewrite' },
+      { currentState: 'rewrite', readSymbol: '1', writeSymbol: '1', move: 'L', nextState: 'rewrite' },
+      { currentState: 'rewrite', readSymbol: ' ', writeSymbol: ' ', move: 'R', nextState: 'double' },
+    ],
   },
   multipliedLengths: {
     tape: ['a','a','b','b','b','c','c','c','c','c','c'],
