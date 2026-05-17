@@ -23,8 +23,14 @@ jobs:
           rm -rf node_modules
           rm -f package-lock.json
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install dependencies with legacy peer deps
+        run: npm install --legacy-peer-deps
+
+      - name: Verify vite.config.ts
+        run: |
+          if [ ! -f vite.config.ts ]; then
+            echo "vite.config.ts not found!" && exit 1;
+          fi
 
       - name: Build project
         run: npm run build
