@@ -23,8 +23,8 @@ import {
   Sparkles,
   Network,
 } from "lucide-react";
-import { EXAMPLES } from "./constants";
 import { TMConfig, TMState, Transition, Symbol } from "./types";
+import { EXAMPLES } from "./examples";
 import { cn } from "./lib/utils";
 import confetti from "canvas-confetti";
 import Markdown from "react-markdown";
@@ -119,7 +119,7 @@ const TapeComponent = ({
 
       {/* Pointer UI */}
       <div className="absolute bottom-4 left-1/2 -ml-3 z-30">
-        <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[10px] border-b-black"></div>
+        <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-10 border-b-black"></div>
       </div>
     </div>
   );
@@ -336,7 +336,7 @@ export default function App() {
     <div className="min-h-screen bg-[#EBEAE6] text-black font-sans selection:bg-black selection:text-white">
       <Header />
 
-      <main className="max-w-[1400px] mx-auto p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <main className="max-w-350 mx-auto p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Column: Simulator */}
         <div className="lg:col-span-8 flex flex-col gap-8">
           {/* Machine Header */}
@@ -444,7 +444,7 @@ export default function App() {
           </section>
 
           {/* Sidebar Area: Tabbed Configuration */}
-          <section className="bg-white rounded-xl border border-black/5 shadow-sm overflow-hidden flex flex-col h-[500px]">
+          <section className="bg-white rounded-xl border border-black/5 shadow-sm overflow-hidden flex flex-col h-125">
             <div className="flex border-b border-black/5">
               {[
                 { id: "rules", label: "Reglas" },
@@ -493,7 +493,7 @@ export default function App() {
                       Inicio
                     </div>
                   </div>
-                  <div className="flex-1 min-h-[300px]">
+                  <div className="flex-1 min-h-75">
                     <StateGraph
                       transitions={config.transitions}
                       currentState={state.currentState}
@@ -646,38 +646,48 @@ export default function App() {
                       },
                       { name: "Verificador de Palíndromos", id: "palindrome" },
                       { name: "Suma Unaria", id: "unaryAddition" },
-                    ].map((ex, i) => (
-                      <button
-                        key={i}
-                        onClick={() => {
-                          const next = EXAMPLES[ex.id];
-                          if (!next) return;
-                          setConfig(next);
-                          // Reset will run with the previous config due to state batching,
-                          // so do an explicit reset using the selected example.
-                          setState({
-                            tape: [...next.tape],
-                            headIndex: 0,
-                            currentState: next.initialState,
-                            isRunning: false,
-                            stepCount: 0,
-                            isHalted: false,
-                          });
-                          setExplanation("");
-                        }}
-                        className="flex items-center justify-between p-4 border border-black/5 rounded-lg hover:bg-black hover:text-white transition-all group"
-                      >
-                        <div className="text-left">
-                          <span className="block text-sm font-medium">
-                            {ex.name}
-                          </span>
-                          <span className="text-[10px] uppercase tracking-widest opacity-50">
-                            Set de Problemas {i + 1}
-                          </span>
-                        </div>
-                        <ChevronRight className="opacity-0 group-hover:opacity-100 -translate-x-2.5 group-hover:translate-x-0 transition-all" />
-                      </button>
-                    ))}
+                    ].map((ex, i) => {
+                      const meta = EXAMPLES[ex.id];
+                      const description = meta?.description;
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => {
+                            const next = EXAMPLES[ex.id];
+                            if (!next) return;
+                            setConfig(next);
+                            // Reset will run with the previous config due to state batching,
+                            // so do an explicit reset using the selected example.
+                            setState({
+                              tape: [...next.tape],
+                              headIndex: 0,
+                              currentState: next.initialState,
+                              isRunning: false,
+                              stepCount: 0,
+                              isHalted: false,
+                            });
+                            // Show what the chosen exercise is about.
+                            setExplanation(next.description ?? "");
+                          }}
+                          className="flex items-center justify-between p-4 border border-black/5 rounded-lg hover:bg-black hover:text-white transition-all group"
+                        >
+                          <div className="text-left">
+                            <span className="block text-sm font-medium">
+                              {meta?.title ?? ex.name}
+                            </span>
+                            {description && (
+                              <span className="block mt-1 text-[11px] leading-snug opacity-70 normal-case tracking-normal">
+                                {description}
+                              </span>
+                            )}
+                            <span className="block text-[10px] uppercase tracking-widest opacity-50 mt-2">
+                              Set de Problemas {i + 1}
+                            </span>
+                          </div>
+                          <ChevronRight className="opacity-0 group-hover:opacity-100 -translate-x-2.5 group-hover:translate-x-0 transition-all" />
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -747,53 +757,12 @@ export default function App() {
 
         {/* Right Column: AI & Stats */}
         <div className="lg:col-span-4 flex flex-col gap-8">
-          {/* Explanation Panel */}
-          <section className="bg-black text-white p-8 rounded-xl shadow-2xl flex flex-col gap-6 relative overflow-hidden">
-            <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
-
-            <div className="flex items-center gap-3">
-              <Sparkles size={18} className="text-yellow-400" />
-              <h3 className="text-xs font-bold uppercase tracking-[0.2em]">
-                Explicación del Paso
-              </h3>
-            </div>
-
-            <div className="min-h-30 flex items-center">
-              {isExplaining ? (
-                <div className="space-y-3 w-full">
-                  <div className="h-4 bg-white/10 rounded animate-pulse w-full"></div>
-                  <div className="h-4 bg-white/10 rounded animate-pulse w-5/6"></div>
-                </div>
-              ) : explanation ? (
-                <div className="prose prose-invert prose-xs">
-                  <Markdown>{explanation}</Markdown>
-                </div>
-              ) : (
-                <p className="text-white/30 italic text-sm font-serif">
-                  Ejecuta la máquina para ver la lógica paso a paso explicada
-                  por la IA de Turing...
-                </p>
-              )}
-            </div>
-
-            <div className="pt-6 border-t border-white/10 flex justify-between items-center text-[10px]">
-              <span className="text-white/40 uppercase font-mono tracking-widest">
-                Estado: Lista
-              </span>
-              <div className="flex gap-1">
-                <div className="w-1 h-1 rounded-full bg-green-500"></div>
-                <div className="w-1 h-1 rounded-full bg-green-500"></div>
-                <div className="w-1 h-1 rounded-full bg-green-500"></div>
-              </div>
-            </div>
-          </section>
-
           {/* Machine Theory */}
           <section className="bg-white p-8 rounded-xl border border-black/5 shadow-sm space-y-6">
             <div className="flex items-center gap-3">
               <BookOpen size={18} />
               <h3 className="text-xs font-bold uppercase tracking-[0.2em]">
-                Nodo de Aprendizaje
+                Conceptos
               </h3>
             </div>
 
