@@ -33,27 +33,39 @@ import StateGraph from "./components/StateGraph";
 // --- Components ---
 
 const Header = () => (
-  <header className="border-b border-black/10 py-6 px-8 flex justify-between items-center bg-white">
-    <div className="flex items-center gap-3">
-      <div className="w-10 h-10 bg-black rounded-sm flex items-center justify-center text-white">
-        <Cpu size={24} />
-      </div>
-      <div>
-        <h1 className="font-sans font-medium tracking-tight text-xl">
-          Maquina Turing
-        </h1>
-        <p className="text-[10px] uppercase tracking-widest text-black/50 font-mono">
-          Simulador de Autómatas
-        </p>
-      </div>
-    </div>
-    <div className="flex items-center gap-4">
-      <div className="flex -space-x-1">
-        <div className="w-8 h-8 rounded-full border-2 border-white bg-blue-100 flex items-center justify-center text-[10px] font-bold">
-          LV
+  <header className="sticky top-0 z-40 border-b border-black/10 bg-white/75 backdrop-blur">
+    <div className="px-6 sm:px-8 py-5 flex justify-between items-center">
+      <div className="flex items-center gap-4 min-w-0">
+        <div className="relative">
+          <div className="absolute -inset-1 rounded-xl bg-linear-to-br from-black/10 via-black/5 to-transparent blur"></div>
+          <div className="relative w-11 h-11 rounded-xl bg-black text-white flex items-center justify-center shadow-sm">
+            <Cpu size={22} />
+          </div>
         </div>
-        <div className="w-8 h-8 rounded-full border-2 border-white bg-green-100 flex items-center justify-center text-[10px] font-bold">
-          MM
+
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <h1 className="font-sans font-semibold tracking-tight text-lg sm:text-xl truncate">
+              Máquina de Turing
+            </h1>
+            <span className="hidden sm:inline-flex text-[10px] font-mono uppercase tracking-widest px-2 py-1 rounded-full border border-black/10 bg-white">
+              Simulador
+            </span>
+          </div>
+          <p className="text-[11px] text-black/50 leading-snug">
+            Autómatas • Cinta • Transiciones • Ejercicios
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <div className="flex -space-x-2">
+          <div className="w-9 h-9 rounded-full border-2 border-white bg-linear-to-br from-blue-200 to-blue-50 flex items-center justify-center text-[10px] font-bold text-blue-900 shadow-sm">
+            LV
+          </div>
+          <div className="w-9 h-9 rounded-full border-2 border-white bg-linear-to-br from-emerald-200 to-emerald-50 flex items-center justify-center text-[10px] font-bold text-emerald-900 shadow-sm">
+            MM
+          </div>
         </div>
       </div>
     </div>
@@ -615,14 +627,16 @@ export default function App() {
 
               {activeTab === "exercises" && (
                 <div className="space-y-6">
-                  <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg flex gap-4">
-                    <Sparkles className="text-blue-500 shrink-0" />
-                    <div>
-                      <h4 className="text-sm font-bold text-blue-900">
+                  <div className="p-5 bg-linear-to-br from-indigo-50 via-blue-50 to-white border border-blue-100/70 rounded-xl flex gap-4 shadow-sm">
+                    <div className="w-10 h-10 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow">
+                      <Sparkles size={18} />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-sm font-bold text-slate-900">
                         Desafíos de Autómatas
                       </h4>
-                      <p className="text-xs text-blue-800 mt-1">
-                        Selecciona un problema para resolverlo.
+                      <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                        Selecciona un ejercicio.
                       </p>
                     </div>
                   </div>
@@ -648,16 +662,17 @@ export default function App() {
                       { name: "Suma Unaria", id: "unaryAddition" },
                     ].map((ex, i) => {
                       const meta = EXAMPLES[ex.id];
+                      const title = meta?.title ?? ex.name;
                       const description = meta?.description;
+                      const isSelected = config === meta;
+
                       return (
                         <button
-                          key={i}
+                          key={ex.id}
                           onClick={() => {
                             const next = EXAMPLES[ex.id];
                             if (!next) return;
                             setConfig(next);
-                            // Reset will run with the previous config due to state batching,
-                            // so do an explicit reset using the selected example.
                             setState({
                               tape: [...next.tape],
                               headIndex: 0,
@@ -666,25 +681,60 @@ export default function App() {
                               stepCount: 0,
                               isHalted: false,
                             });
-                            // Show what the chosen exercise is about.
                             setExplanation(next.description ?? "");
                           }}
-                          className="flex items-center justify-between p-4 border border-black/5 rounded-lg hover:bg-black hover:text-white transition-all group"
+                          className={cn(
+                            "group relative w-full text-left rounded-xl border p-4 transition-all",
+                            "bg-white/80 hover:bg-white",
+                            "border-black/5 hover:border-black/10",
+                            "shadow-sm hover:shadow-md",
+                            "focus:outline-none focus:ring-2 focus:ring-black/30",
+                            isSelected &&
+                              "ring-2 ring-black/80 border-black/10 shadow-md",
+                          )}
                         >
-                          <div className="text-left">
-                            <span className="block text-sm font-medium">
-                              {meta?.title ?? ex.name}
-                            </span>
-                            {description && (
-                              <span className="block mt-1 text-[11px] leading-snug opacity-70 normal-case tracking-normal">
-                                {description}
-                              </span>
-                            )}
-                            <span className="block text-[10px] uppercase tracking-widest opacity-50 mt-2">
-                              Set de Problemas {i + 1}
-                            </span>
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold text-slate-900 truncate">
+                                  {title}
+                                </span>
+                                {isSelected && (
+                                  <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full bg-black text-white">
+                                    Activo
+                                  </span>
+                                )}
+                              </div>
+                              {description && (
+                                <p className="mt-1 text-[12px] leading-relaxed text-slate-600">
+                                  {description}
+                                </p>
+                              )}
+                              <div className="mt-3 flex items-center gap-2">
+                                <span className="text-[10px] uppercase tracking-widest text-slate-400">
+                                  Ejercicio {i + 1}
+                                </span>
+                                <span className="h-1 w-1 rounded-full bg-slate-300" />
+                                <span className="text-[10px] font-mono text-slate-400">
+                                  Estado inicial: {meta?.initialState}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div
+                              className={cn(
+                                "mt-1 text-slate-400 transition-all",
+                                "group-hover:text-slate-900",
+                                "group-hover:translate-x-0.5",
+                              )}
+                            >
+                              <ChevronRight />
+                            </div>
                           </div>
-                          <ChevronRight className="opacity-0 group-hover:opacity-100 -translate-x-2.5 group-hover:translate-x-0 transition-all" />
+
+                          <div className="pointer-events-none absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="absolute inset-0 rounded-xl bg-linear-to-r from-transparent via-black/3 to-transparent" />
+                          </div>
                         </button>
                       );
                     })}
@@ -802,7 +852,7 @@ export default function App() {
       </main>
 
       <footer className="max-w-350 mx-auto p-8 pt-0 flex justify-between items-center text-[10px] font-mono text-black/30 uppercase tracking-[0.3em]">
-        <span>© 2026 Maquina Turing</span>
+        <span>© 2026 Maquina Turing - Universidad Tecnologica de Pereira</span>
       </footer>
     </div>
   );
