@@ -88,3 +88,6 @@ Estado H: (Halt - Detención)
 - "The Busy Beaver Problem: A New Millennium Attack" - Scott Aaronson
 - "Limits of Computation" - Wolfram MathWorld
 - OEIS A060843 - Busy beaver challenge records
+
+## Additional Exercises
+See [EXERCISES.md](EXERCISES.md) for a collection of Turing machine exercises (binary addition, multiplication, Fibonacci, unary multiplication, and language decision problems).

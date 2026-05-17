@@ -55,5 +55,50 @@ export const EXAMPLES: Record<string, TMConfig> = {
       { currentState: 'q1', readSymbol: '_', writeSymbol: '_', move: 'L', nextState: 'q2' },
       { currentState: 'q2', readSymbol: '1', writeSymbol: '_', move: 'N', nextState: 'accept' },
     ],
+  },
+  busyBeaver: {
+    tape: ['0'],
+    initialState: 'A',
+    blankSymbol: '0',
+    transitions: [
+      // State A
+      { currentState: 'A', readSymbol: '0', writeSymbol: '1', move: 'R', nextState: 'B' },
+      { currentState: 'A', readSymbol: '1', writeSymbol: '1', move: 'L', nextState: 'C' },
+      
+      // State B
+      { currentState: 'B', readSymbol: '0', writeSymbol: '1', move: 'L', nextState: 'A' },
+      { currentState: 'B', readSymbol: '1', writeSymbol: '1', move: 'R', nextState: 'H' },
+      
+      // State C
+      { currentState: 'C', readSymbol: '0', writeSymbol: '1', move: 'L', nextState: 'B' },
+      { currentState: 'C', readSymbol: '1', writeSymbol: '1', move: 'R', nextState: 'H' },
+      
+      // State H (Halt - no transitions needed)
+    ],
+  },
+  
+  // Ejercicio 12: 3-state busy beaver (alternative variant - 21 steps, 5 ones)
+  // This explores the question: among all possible Turing machines with n states 
+  // and k symbols, which one produces the most output (symbols written or steps taken)?
+  // Formula for possible TMs: (2k(n+1))^(nk) where n=states, k=symbols
+  exercise12: {
+    tape: ['0'],
+    initialState: 'A',
+    blankSymbol: '0',
+    transitions: [
+      // State A
+      { currentState: 'A', readSymbol: '0', writeSymbol: '1', move: 'R', nextState: 'B' },
+      { currentState: 'A', readSymbol: '1', writeSymbol: '1', move: 'R', nextState: 'H' },
+      
+      // State B
+      { currentState: 'B', readSymbol: '0', writeSymbol: '1', move: 'L', nextState: 'B' },
+      { currentState: 'B', readSymbol: '1', writeSymbol: '0', move: 'R', nextState: 'C' },
+      
+      // State C
+      { currentState: 'C', readSymbol: '0', writeSymbol: '1', move: 'L', nextState: 'C' },
+      { currentState: 'C', readSymbol: '1', writeSymbol: '1', move: 'L', nextState: 'A' },
+      
+      // State H (Halt)
+    ],
   }
 };

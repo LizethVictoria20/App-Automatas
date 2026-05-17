@@ -636,13 +636,14 @@ export default function App() {
                     </div>
                     
                     <div className="grid grid-cols-1 gap-3">
-                      {[{ name: 'Incremento Binario', id: 'binaryIncrement' }, { name: 'Verificador de Palíndromos', id: 'palindrome' }, { name: 'Suma Unaria', id: 'unary' }].map((ex, i) => (
+                      {[{ name: 'Incremento Binario', id: 'binaryIncrement' }, { name: 'Verificador de Palíndromos', id: 'palindrome' }, { name: 'Suma Unaria', id: 'unary' }, { name: '3-state Busy Beaver', id: 'exercise12' }].map((ex, i) => (
                         <button 
                           key={i}
                           onClick={() => {
                             if (ex.id === 'binaryIncrement') setConfig(EXAMPLES.binaryIncrement);
                             if (ex.id === 'palindrome') setConfig(EXAMPLES.palindrome);
                             if (ex.id === 'unary') setConfig(EXAMPLES.unaryAddition);
+                            if (ex.id === 'exercise12') setConfig(EXAMPLES.exercise12);
                             reset();
                           }}
                           className="flex items-center justify-between p-4 border border-black/5 rounded-lg hover:bg-black hover:text-white transition-all group"
@@ -733,24 +734,52 @@ export default function App() {
             </div>
 
             <div className="space-y-4">
-              <div className="p-4 rounded-lg bg-[#F8F8F7] border border-black/5">
-                <h4 className="text-xs font-bold mb-1">Máquina de Estados</h4>
-                <p className="text-[11px] leading-relaxed text-black/60">
-                  Una máquina de Turing es un modelo matemático de computación que manipula símbolos en una cinta de acuerdo con una tabla de reglas.
-                </p>
-              </div>
-              <div className="p-4 rounded-lg bg-[#F8F8F7] border border-black/5">
-                <h4 className="text-xs font-bold mb-1">Problema de la Parada</h4>
-                <p className="text-[11px] leading-relaxed text-black/60">
-                  No existe un algoritmo general que pueda determinar si un programa se detendrá eventualmente o se ejecutará para siempre. Esta máquina explora ese límite.
-                </p>
-              </div>
-              <div className="p-4 rounded-lg bg-[#F8F8F7] border border-black/5">
-                <h4 className="text-xs font-bold mb-1">Estado de Parada (Halt)</h4>
-                <p className="text-[11px] leading-relaxed text-black/60">
-                  Es el estado terminal donde la máquina finaliza su ejecución. Indica que el cómputo ha terminado, ya sea porque se llegó a una solución (Aceptar/Rechazar) o porque no existen más reglas aplicables para la configuración actual.
-                </p>
-              </div>
+              {config === EXAMPLES.exercise12 ? (
+                <>
+                  <div className="p-4 rounded-lg bg-[#F8F8F7] border border-black/5">
+                    <h4 className="text-xs font-bold mb-1">Busy Beaver Problem</h4>
+                    <p className="text-[11px] leading-relaxed text-black/60">
+                      Entre todas las máquinas de Turing con n estados y k símbolos que haltan en una cinta en blanco, ¿cuál deja el máximo número de símbolos no-blancos? Ese es el busy beaver.
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-[#F8F8F7] border border-black/5">
+                    <h4 className="text-xs font-bold mb-1">Fórmula de Máquinas Posibles</h4>
+                    <p className="text-[11px] leading-relaxed text-black/60 font-mono">
+                      (2k(n+1))^(nk)
+                    </p>
+                    <p className="text-[10px] leading-relaxed text-black/50 mt-2">
+                      Donde n = estados (sin contar halt), k = símbolos
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-blue-50 border border-blue-100">
+                    <h4 className="text-xs font-bold mb-1 text-blue-900">Ejercicio 12</h4>
+                    <p className="text-[10px] leading-relaxed text-blue-800">
+                      Este busy beaver toma 21 pasos e imprime 5 símbolos. Observa cómo la máquina alterna entre estados, escribiendo y moviéndose estratégicamente.
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="p-4 rounded-lg bg-[#F8F8F7] border border-black/5">
+                    <h4 className="text-xs font-bold mb-1">Máquina de Estados</h4>
+                    <p className="text-[11px] leading-relaxed text-black/60">
+                      Una máquina de Turing es un modelo matemático de computación que manipula símbolos en una cinta de acuerdo con una tabla de reglas.
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-[#F8F8F7] border border-black/5">
+                    <h4 className="text-xs font-bold mb-1">Problema de la Parada</h4>
+                    <p className="text-[11px] leading-relaxed text-black/60">
+                      No existe un algoritmo general que pueda determinar si un programa se detendrá eventualmente o se ejecutará para siempre. Esta máquina explora ese límite.
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-[#F8F8F7] border border-black/5">
+                    <h4 className="text-xs font-bold mb-1">Estado de Parada (Halt)</h4>
+                    <p className="text-[11px] leading-relaxed text-black/60">
+                      Es el estado terminal donde la máquina finaliza su ejecución. Indica que el cómputo ha terminado, ya sea porque se llegó a una solución (Aceptar/Rechazar) o porque no existen más reglas aplicables para la configuración actual.
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           </section>
         </div>
