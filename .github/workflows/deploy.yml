@@ -1,9 +1,12 @@
-name: Deploy to Production
+name: Deploy to GitHub Pages
 
 on:
   push:
     branches:
       - main
+
+permissions:
+  contents: write
 
 jobs:
   build-and-deploy:
@@ -11,32 +14,38 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: "16"
+          node-version: 20
+          cache: npm
 
-      - name: Clean up node_modules and package-lock.json
+      - name: Install dependencies
+        shell: bash
         run: |
-          rm -rf node_modules
-          rm -f package-lock.json
+          set -euo pipefail
 
-      - name: Install dependencies with legacy peer deps
-        run: npm install --legacy-peer-deps
-
-      - name: Verify vite.config.ts
-        run: |
-          if [ ! -f vite.config.ts ]; then
-            echo "vite.config.ts not found!" && exit 1;
+          # Prefer reproducible installs when a lockfile exists
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
           fi
+
+          # Workaround for npm optionalDependencies/native bindings issues (Tailwind oxide)
+          node -e "require('@tailwindcss/oxide')" >/dev/null 2>&1 || (
+            echo "Reinstalling dependencies due to optional deps/native binding issue...";
+            rm -rf node_modules package-lock.json;
+            npm install --include=optional
+          )
 
       - name: Build project
         run: npm run build
 
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
