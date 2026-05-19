@@ -660,6 +660,8 @@ export default function App() {
                       },
                       { name: "Verificador de Palíndromos", id: "palindrome" },
                       { name: "Suma Unaria", id: "unaryAddition" },
+                      { name: "3-State Busy Beaver", id: "busyBeaver" },
+
                     ].map((ex, i) => {
                       const meta = EXAMPLES[ex.id];
                       const title = meta?.title ?? ex.name;
