@@ -131,7 +131,7 @@ const TapeComponent = ({
 
       {/* Pointer UI */}
       <div className="absolute bottom-4 left-1/2 -ml-3 z-30">
-        <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-10 border-b-black"></div>
+        <div className="w-0 h-0 bg-white  border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-10 border-b-pink"></div>
       </div>
     </div>
   );
@@ -625,41 +625,113 @@ export default function App() {
                 </div>
               )}
 
-                {activeTab === 'exercises' && (
-                  <div className="space-y-6">
-                    <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg flex gap-4">
-                      <Sparkles className="text-blue-500 shrink-0" />
-                      <div>
-                        <h4 className="text-sm font-bold text-blue-900">Desafíos de Autómatas</h4>
-                        <p className="text-xs text-blue-800 mt-1">Selecciona un problema para resolverlo.</p>
-                      </div>
+              {activeTab === "exercises" && (
+                <div className="space-y-6">
+                  <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg flex gap-4">
+                    <Sparkles className="text-blue-500 shrink-0" />
+                    <div>
+                      <h4 className="text-sm font-bold text-blue-900">
+                        Desafíos de Autómatas
+                      </h4>
+                      <p className="text-xs text-blue-800 mt-1">
+                        Selecciona un problema para resolverlo.
+                      </p>
                     </div>
-                    
-                    <div className="grid grid-cols-1 gap-3">
-                      {[{ name: 'Incremento Binario', id: 'binaryIncrement' }, { name: 'Verificador de Palíndromos', id: 'palindrome' }, { name: 'Suma Unaria', id: 'unary' }, { name: '3-state Busy Beaver', id: 'exercise12' }, { name: '4-State Busy Beaver', id: 'busyBeaver4State' }, { name: 'Powers of Two', id: 'powersOfTwo' }, { name: 'Multiplied Lengths', id: 'multipliedLengths' }, { name: 'Suma Binaria', id: 'binaryAddition' }, { name: 'Multiplicación Unaria', id: 'unaryMultiplication' }, { name: 'Multiplicación Binaria', id: 'binaryMultiplication' }].map((ex, i) => (
-                        <button 
-                          key={i}
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3">
+                    {[
+                      { name: "Repetir 01", id: "repeat01" },
+                      { name: "Incremento Binario", id: "binaryIncrement" },
+                      {
+                        name: "Divisible por 3 (binario)",
+                        id: "divisibleBy3Binary",
+                      },
+                      { name: "Copiar 1s", id: "copyOnes" },
+                      {
+                        name: "Divisible por 3 (base 10)",
+                        id: "divisibleBy3Base10",
+                      },
+                      {
+                        name: "Tres cadenas de igual longitud (a^n b^n c^n)",
+                        id: "threeEqualLength",
+                      },
+                      { name: "Verificador de Palíndromos", id: "palindrome" },
+                      { name: "Suma Unaria", id: "unaryAddition" },
+                    ].map((ex, i) => {
+                      const meta = EXAMPLES[ex.id];
+                      const title = meta?.title ?? ex.name;
+                      const description = meta?.description;
+                      const isSelected = config === meta;
+
+                      return (
+                        <button
+                          key={ex.id}
                           onClick={() => {
-                            if (ex.id === 'binaryIncrement') setConfig(EXAMPLES.binaryIncrement);
-                            if (ex.id === 'palindrome') setConfig(EXAMPLES.palindrome);
-                            if (ex.id === 'unary') setConfig(EXAMPLES.unaryAddition);
-                            if (ex.id === 'exercise12') setConfig(EXAMPLES.exercise12);
-                            if (ex.id === 'busyBeaver4State') setConfig(EXAMPLES.busyBeaver4State);
-                            if (ex.id === 'powersOfTwo') setConfig(EXAMPLES.powersOfTwo);
-<<<<<<< HEAD
-=======
-                            if (ex.id === 'binaryAddition') setConfig(EXAMPLES.binaryAddition);
-                            if (ex.id === 'multipliedLengths') setConfig(EXAMPLES.multipliedLengths);
-                            if (ex.id === 'unaryMultiplication') setConfig(EXAMPLES.unaryMultiplication);
-                            if (ex.id === 'binaryMultiplication') setConfig(EXAMPLES.binaryMultiplication);
->>>>>>> 6163887 (Replace abc/fibonacci exercises with Multiplied Lengths; update UI and docs)
-                            reset();
+                            const next = EXAMPLES[ex.id];
+                            if (!next) return;
+                            setConfig(next);
+                            setState({
+                              tape: [...next.tape],
+                              headIndex: 0,
+                              currentState: next.initialState,
+                              isRunning: false,
+                              stepCount: 0,
+                              isHalted: false,
+                            });
+                            setExplanation(next.description ?? "");
                           }}
-                          className="flex items-center justify-between p-4 border border-black/5 rounded-lg hover:bg-black hover:text-white transition-all group"
+                          className={cn(
+                            "group relative w-full text-left rounded-xl border p-4 transition-all",
+                            "bg-white/80 hover:bg-white",
+                            "border-black/5 hover:border-black/10",
+                            "shadow-sm hover:shadow-md",
+                            "focus:outline-none focus:ring-2 focus:ring-black/30",
+                            isSelected &&
+                              "ring-2 ring-black/80 border-black/10 shadow-md",
+                          )}
                         >
-                          <div className="text-left">
-                            <span className="block text-sm font-medium">{ex.name}</span>
-                            <span className="text-[10px] uppercase tracking-widest opacity-50">Set de Problemas {i+1}</span>
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold text-slate-900 truncate">
+                                  {title}
+                                </span>
+                                {isSelected && (
+                                  <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full bg-black text-white">
+                                    Activo
+                                  </span>
+                                )}
+                              </div>
+                              {description && (
+                                <p className="mt-1 text-[12px] leading-relaxed text-slate-600">
+                                  {description}
+                                </p>
+                              )}
+                              <div className="mt-3 flex items-center gap-2">
+                                <span className="text-[10px] uppercase tracking-widest text-slate-400">
+                                  Ejercicio {i + 1}
+                                </span>
+                                <span className="h-1 w-1 rounded-full bg-slate-300" />
+                                <span className="text-[10px] font-mono text-slate-400">
+                                  Estado inicial: {meta?.initialState}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div
+                              className={cn(
+                                "mt-1 text-slate-400 transition-all",
+                                "group-hover:text-slate-900",
+                                "group-hover:translate-x-0.5",
+                              )}
+                            >
+                              <ChevronRight />
+                            </div>
+                          </div>
+
+                          <div className="pointer-events-none absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="absolute inset-0 rounded-xl bg-linear-to-r from-transparent via-black/3 to-transparent" />
                           </div>
                         </button>
                       );
@@ -746,13 +818,20 @@ export default function App() {
               {config === EXAMPLES.exercise12 ? (
                 <>
                   <div className="p-4 rounded-lg bg-[#F8F8F7] border border-black/5">
-                    <h4 className="text-xs font-bold mb-1">Busy Beaver Problem</h4>
+                    <h4 className="text-xs font-bold mb-1">
+                      Busy Beaver Problem
+                    </h4>
                     <p className="text-[11px] leading-relaxed text-black/60">
-                      Entre todas las máquinas de Turing con n estados y k símbolos que haltan en una cinta en blanco, ¿cuál deja el máximo número de símbolos no-blancos? Ese es el busy beaver.
+                      Entre todas las máquinas de Turing con n estados y k
+                      símbolos que haltan en una cinta en blanco, ¿cuál deja el
+                      máximo número de símbolos no-blancos? Ese es el busy
+                      beaver.
                     </p>
                   </div>
                   <div className="p-4 rounded-lg bg-[#F8F8F7] border border-black/5">
-                    <h4 className="text-xs font-bold mb-1">Fórmula de Máquinas Posibles</h4>
+                    <h4 className="text-xs font-bold mb-1">
+                      Fórmula de Máquinas Posibles
+                    </h4>
                     <p className="text-[11px] leading-relaxed text-black/60 font-mono">
                       (2k(n+1))^(nk)
                     </p>
@@ -761,30 +840,48 @@ export default function App() {
                     </p>
                   </div>
                   <div className="p-4 rounded-lg bg-blue-50 border border-blue-100">
-                    <h4 className="text-xs font-bold mb-1 text-blue-900">Ejercicio 12</h4>
+                    <h4 className="text-xs font-bold mb-1 text-blue-900">
+                      Ejercicio 12
+                    </h4>
                     <p className="text-[10px] leading-relaxed text-blue-800">
-                      Este busy beaver toma 21 pasos e imprime 5 símbolos. Observa cómo la máquina alterna entre estados, escribiendo y moviéndose estratégicamente.
+                      Este busy beaver toma 21 pasos e imprime 5 símbolos.
+                      Observa cómo la máquina alterna entre estados, escribiendo
+                      y moviéndose estratégicamente.
                     </p>
                   </div>
                 </>
               ) : (
                 <>
                   <div className="p-4 rounded-lg bg-[#F8F8F7] border border-black/5">
-                    <h4 className="text-xs font-bold mb-1">Máquina de Estados</h4>
+                    <h4 className="text-xs font-bold mb-1">
+                      Máquina de Estados
+                    </h4>
                     <p className="text-[11px] leading-relaxed text-black/60">
-                      Una máquina de Turing es un modelo matemático de computación que manipula símbolos en una cinta de acuerdo con una tabla de reglas.
+                      Una máquina de Turing es un modelo matemático de
+                      computación que manipula símbolos en una cinta de acuerdo
+                      con una tabla de reglas.
                     </p>
                   </div>
                   <div className="p-4 rounded-lg bg-[#F8F8F7] border border-black/5">
-                    <h4 className="text-xs font-bold mb-1">Problema de la Parada</h4>
+                    <h4 className="text-xs font-bold mb-1">
+                      Problema de la Parada
+                    </h4>
                     <p className="text-[11px] leading-relaxed text-black/60">
-                      No existe un algoritmo general que pueda determinar si un programa se detendrá eventualmente o se ejecutará para siempre. Esta máquina explora ese límite.
+                      No existe un algoritmo general que pueda determinar si un
+                      programa se detendrá eventualmente o se ejecutará para
+                      siempre. Esta máquina explora ese límite.
                     </p>
                   </div>
                   <div className="p-4 rounded-lg bg-[#F8F8F7] border border-black/5">
-                    <h4 className="text-xs font-bold mb-1">Estado de Parada (Halt)</h4>
+                    <h4 className="text-xs font-bold mb-1">
+                      Estado de Parada (Halt)
+                    </h4>
                     <p className="text-[11px] leading-relaxed text-black/60">
-                      Es el estado terminal donde la máquina finaliza su ejecución. Indica que el cómputo ha terminado, ya sea porque se llegó a una solución (Aceptar/Rechazar) o porque no existen más reglas aplicables para la configuración actual.
+                      Es el estado terminal donde la máquina finaliza su
+                      ejecución. Indica que el cómputo ha terminado, ya sea
+                      porque se llegó a una solución (Aceptar/Rechazar) o porque
+                      no existen más reglas aplicables para la configuración
+                      actual.
                     </p>
                   </div>
                 </>
