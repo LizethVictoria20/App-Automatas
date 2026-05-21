@@ -222,7 +222,7 @@ export default function StateGraph({ transitions, currentState, initialState }: 
 
   return (
     <div className="w-full h-full bg-[#fdfdfd] border border-black/5 rounded-lg overflow-hidden flex items-center justify-center">
-      <svg ref={containerRef} width="600" height="400" viewBox="0 0 600 400" className="max-w-full h-auto" />
+      <svg ref={containerRef} width="800" height="600" viewBox="0 0 600 400" className="max-w-full h-auto" />
     </div>
   );
 }

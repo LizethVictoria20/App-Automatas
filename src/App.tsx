@@ -151,11 +151,27 @@ export default function App() {
   const [speed, setSpeed] = useState(500); // ms
   const [explanation, setExplanation] = useState<string>("");
   const [isExplaining, setIsExplaining] = useState(false);
-  const [activeTab, setActiveTab] = useState<
-    "rules" | "exercises" | "config" | "graph"
-  >("graph");
+  const [activeTab, setActiveTab] = useState<"rules" | "exercises" | "config">(
+    "rules",
+  );
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Auto-apply config changes to state when config changes
+  useEffect(() => {
+    // Only reset if machine is not running and hasn't made progress
+    if (!state.isRunning && state.stepCount === 0) {
+      setState({
+        tape: [...config.tape],
+        headIndex: 0,
+        currentState: config.initialState,
+        isRunning: false,
+        stepCount: 0,
+        isHalted: false,
+      });
+      setExplanation("");
+    }
+  }, [config.tape, config.initialState, state.isRunning, state.stepCount]);
 
   const reset = useCallback(() => {
     setState({
@@ -348,9 +364,9 @@ export default function App() {
     <div className="min-h-screen bg-[#EBEAE6] text-black font-sans selection:bg-black selection:text-white">
       <Header />
 
-      <main className="max-w-350 mx-auto p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Left Column: Simulator */}
-        <div className="lg:col-span-8 flex flex-col gap-8">
+      <main className="max-w-350 mx-auto p-8 flex flex-col gap-8">
+        {/* Main Content */}
+        <div className="flex flex-col gap-8">
           {/* Machine Header */}
           <section className="bg-white p-6 rounded-xl border border-black/5 shadow-sm space-y-4">
             <div className="flex justify-between items-center">
@@ -363,6 +379,7 @@ export default function App() {
                     "text-2xl font-semibold tracking-tight",
                     state.currentState === "accept" && "text-green-600",
                     state.currentState === "reject" && "text-red-600",
+                    state.isHalted && state.stepCount === 0 && "text-orange-600",
                   )}
                 >
                   {state.isHalted
@@ -370,7 +387,9 @@ export default function App() {
                       ? "Cadena Aceptada ✓"
                       : state.currentState === "reject"
                         ? "Cadena Rechazada ✗"
-                        : "Simulación Finalizada"
+                        : state.stepCount === 0
+                          ? "Sin regla para comenzar - Verifica tu configuración"
+                          : "Simulación Finalizada"
                     : "Ejecución del Simulador"}
                 </p>
               </div>
@@ -393,6 +412,21 @@ export default function App() {
                 </div>
               </div>
             </div>
+            {state.isHalted && state.stepCount === 0 && (
+              <div className="p-4 rounded-lg bg-orange-50 border border-orange-200 flex items-start gap-3">
+                <Info size={18} className="text-orange-600 mt-0.5 shrink-0" />
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-orange-900">
+                    No se encontró ninguna regla de transición
+                  </p>
+                  <p className="text-xs text-orange-700 leading-relaxed">
+                    La máquina no tiene una regla definida para el estado <strong>"{state.currentState}"</strong> 
+                    {" "}leyendo el símbolo <strong>"{state.tape[state.headIndex] || config.blankSymbol}"</strong>.
+                    {" "}Ve a la pestaña <strong>Reglas</strong> y agrega una transición apropiada.
+                  </p>
+                </div>
+              </div>
+            )}
           </section>
 
           {/* Tape Visualization */}
@@ -455,12 +489,35 @@ export default function App() {
             </div>
           </section>
 
+          {/* State Graph - Full Width */}
+          <section className="bg-white p-8 rounded-xl border border-black/5 shadow-sm space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Network size={20} />
+                <h3 className="text-sm font-bold uppercase tracking-[0.2em]">
+                  Diagrama de Estados
+                </h3>
+              </div>
+              <div className="flex items-center gap-2 text-[10px] text-black/40 uppercase font-mono">
+                <div className="w-2 h-2 rounded-full bg-black"></div> Actual
+                <div className="ml-2 w-2 h-2 rounded-full border border-black border-dashed"></div>{" "}
+                Inicio
+              </div>
+            </div>
+            <div className="h-150">
+              <StateGraph
+                transitions={config.transitions}
+                currentState={state.currentState}
+                initialState={config.initialState}
+              />
+            </div>
+          </section>
+
           {/* Sidebar Area: Tabbed Configuration */}
           <section className="bg-white rounded-xl border border-black/5 shadow-sm overflow-hidden flex flex-col h-125">
             <div className="flex border-b border-black/5">
               {[
-                { id: "rules", label: "Reglas" },
-                { id: "graph", label: "Gráfico" },
+                { id: "rules", label: "Pasos" },
                 { id: "exercises", label: "Ejercicios" },
                 { id: "config", label: "Config" },
               ].map((tab) => (
@@ -494,26 +551,6 @@ export default function App() {
                   <option key={s} value={s} />
                 ))}
               </datalist>
-              {activeTab === "graph" && (
-                <div className="h-full flex flex-col gap-4">
-                  <div className="flex justify-between items-center">
-                    <h3 className="font-medium">Diagrama de Estados</h3>
-                    <div className="flex items-center gap-2 text-[10px] text-black/40 uppercase font-mono">
-                      <div className="w-2 h-2 rounded-full bg-black"></div>{" "}
-                      Actual
-                      <div className="ml-2 w-2 h-2 rounded-full border border-black border-dashed"></div>{" "}
-                      Inicio
-                    </div>
-                  </div>
-                  <div className="flex-1 min-h-75">
-                    <StateGraph
-                      transitions={config.transitions}
-                      currentState={state.currentState}
-                      initialState={config.initialState}
-                    />
-                  </div>
-                </div>
-              )}
 
               {activeTab === "rules" && (
                 <div className="space-y-4">
@@ -634,34 +671,57 @@ export default function App() {
                         Desafíos de Autómatas
                       </h4>
                       <p className="text-xs text-blue-800 mt-1">
-                        Selecciona un problema para resolverlo.
+                        Selecciona un problema para ver cómo una Máquina de Turing lo resuelve paso a paso.
                       </p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 gap-3">
                     {[
-                      { name: "Repetir 01", id: "repeat01" },
-                      { name: "Incremento Binario", id: "binaryIncrement" },
+                      { 
+                        name: "Repetir 01", 
+                        id: "repeat01",
+                        detail: "Esta máquina duplica el patrón '01' creando '0101'. Es un ejemplo básico de cómo copiar información en una cinta. La máquina lee los símbolos y los escribe nuevamente al final."
+                      },
+                      { 
+                        name: "Incremento Binario", 
+                        id: "binaryIncrement",
+                        detail: "Suma 1 a un número binario. Por ejemplo, '1011' (11 en decimal) se convierte en '1100' (12 en decimal). La máquina trabaja de derecha a izquierda, como lo harías en papel, manejando los acarreos."
+                      },
                       {
                         name: "Divisible por 3 (binario)",
                         id: "divisibleBy3Binary",
+                        detail: "Verifica si un número binario es divisible por 3. Usa la propiedad de que un número binario es divisible por 3 si la suma alternada de sus dígitos es divisible por 3. Acepta la cadena si cumple la condición."
                       },
-                      { name: "Copiar 1s", id: "copyOnes" },
+                      { 
+                        name: "Copiar 1s", 
+                        id: "copyOnes",
+                        detail: "Copia todos los símbolos '1' de una secuencia al final de la cinta. Útil para entender cómo una máquina puede 'recordar' y reproducir información leyendo y escribiendo en diferentes posiciones."
+                      },
                       {
                         name: "Divisible por 3 (base 10)",
                         id: "divisibleBy3Base10",
+                        detail: "Similar al caso binario, pero trabaja con dígitos decimales (0-9). Determina si un número en base 10 es divisible por 3 usando aritmética modular. Un número es divisible por 3 si la suma de sus dígitos lo es."
                       },
                       {
-                        name: "Tres cadenas de igual longitud (a^n b^n c^n)",
+                        name: "Tres cadenas de igual longitud (aⁿbⁿcⁿ)",
                         id: "threeEqualLength",
+                        detail: "Este es un problema clásico que demuestra el poder de las Máquinas de Turing sobre otros autómatas. Verifica que una cadena tenga exactamente el mismo número de 'a', 'b' y 'c' en ese orden. Por ejemplo: 'aabbcc' es válida, pero 'aabbc' no."
                       },
-                      { name: "Verificador de Palíndromos", id: "palindrome" },
-                      { name: "Suma Unaria", id: "unaryAddition" },
+                      { 
+                        name: "Verificador de Palíndromos", 
+                        id: "palindrome",
+                        detail: "Determina si una palabra se lee igual de izquierda a derecha que de derecha a izquierda. Por ejemplo: '1001' es un palíndromo. La máquina compara el primer símbolo con el último, luego el segundo con el penúltimo, y así sucesivamente."
+                      },
+                      { 
+                        name: "Suma Unaria", 
+                        id: "unaryAddition",
+                        detail: "Suma dos números representados en notación unaria (usando '1's). Por ejemplo, '111+11' representa 3+2. La máquina cuenta todos los '1's y produce el resultado como una secuencia continua de '1's que representa la suma."
+                      },
                     ].map((ex, i) => {
                       const meta = EXAMPLES[ex.id];
                       const title = meta?.title ?? ex.name;
-                      const description = meta?.description;
+                      const description = ex.detail;
                       const isSelected = config === meta;
 
                       return (
@@ -682,7 +742,7 @@ export default function App() {
                             setExplanation(next.description ?? "");
                           }}
                           className={cn(
-                            "group relative w-full text-left rounded-xl border p-4 transition-all",
+                            "group relative w-full text-left rounded-xl border p-5 transition-all",
                             "bg-white/80 hover:bg-white",
                             "border-black/5 hover:border-black/10",
                             "shadow-sm hover:shadow-md",
@@ -693,28 +753,32 @@ export default function App() {
                         >
                           <div className="flex items-start justify-between gap-4">
                             <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold text-slate-900 truncate">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="text-sm font-bold text-slate-900">
                                   {title}
                                 </span>
                                 {isSelected && (
-                                  <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full bg-black text-white">
+                                  <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-full bg-black text-white">
                                     Activo
                                   </span>
                                 )}
                               </div>
                               {description && (
-                                <p className="mt-1 text-[12px] leading-relaxed text-slate-600">
+                                <p className="text-[11px] leading-relaxed text-slate-600">
                                   {description}
                                 </p>
                               )}
                               <div className="mt-3 flex items-center gap-2">
-                                <span className="text-[10px] uppercase tracking-widest text-slate-400">
+                                <span className="text-[9px] uppercase tracking-widest text-slate-400 font-semibold">
                                   Ejercicio {i + 1}
                                 </span>
                                 <span className="h-1 w-1 rounded-full bg-slate-300" />
-                                <span className="text-[10px] font-mono text-slate-400">
+                                <span className="text-[9px] font-mono text-slate-400">
                                   Estado inicial: {meta?.initialState}
+                                </span>
+                                <span className="h-1 w-1 rounded-full bg-slate-300" />
+                                <span className="text-[9px] font-mono text-slate-400">
+                                  {meta?.transitions.length} reglas
                                 </span>
                               </div>
                             </div>
@@ -742,6 +806,15 @@ export default function App() {
 
               {activeTab === "config" && (
                 <div className="space-y-6">
+                  <div className="p-4 rounded-lg bg-green-50 border border-green-200">
+                    <div className="flex items-start gap-2">
+                      <Sparkles size={16} className="text-green-600 mt-0.5 shrink-0" />
+                      <p className="text-[11px] text-green-800 leading-relaxed">
+                        Los cambios en la configuración se aplican <strong>automáticamente</strong> cuando la máquina está en estado inicial (sin pasos ejecutados).
+                      </p>
+                    </div>
+                  </div>
+                  
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase opacity-40">
                       Contenido Inicial de la Cinta
@@ -755,6 +828,7 @@ export default function App() {
                           tape: e.target.value.split(""),
                         }))
                       }
+                      placeholder="Ejemplo: 1011"
                     />
                   </div>
                   <div className="space-y-2">
@@ -770,8 +844,29 @@ export default function App() {
                           blankSymbol: e.target.value,
                         }))
                       }
+                      placeholder="_"
                     />
                   </div>
+                  
+                  {(state.stepCount > 0 || state.isRunning) && (
+                    <div className="p-4 rounded-lg bg-amber-50 border border-amber-200">
+                      <div className="flex items-start gap-2">
+                        <Info size={16} className="text-amber-600 mt-0.5 shrink-0" />
+                        <div className="space-y-2">
+                          <p className="text-[11px] text-amber-800 leading-relaxed">
+                            La máquina está en ejecución o ya ha ejecutado pasos. Para aplicar los cambios de configuración, debes reiniciarla.
+                          </p>
+                          <button
+                            onClick={reset}
+                            className="w-full flex items-center justify-center gap-2 py-2 bg-amber-600 text-white rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-amber-700 transition-all"
+                          >
+                            <RotateCcw size={14} /> Reiniciar Máquina
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="pt-4 flex gap-3">
                     <button
                       onClick={exportLog}
@@ -798,93 +893,6 @@ export default function App() {
                     </button>
                   </div>
                 </div>
-              )}
-            </div>
-          </section>
-        </div>
-
-        {/* Right Column: AI & Stats */}
-        <div className="lg:col-span-4 flex flex-col gap-8">
-          {/* Machine Theory */}
-          <section className="bg-white p-8 rounded-xl border border-black/5 shadow-sm space-y-6">
-            <div className="flex items-center gap-3">
-              <BookOpen size={18} />
-              <h3 className="text-xs font-bold uppercase tracking-[0.2em]">
-                Conceptos
-              </h3>
-            </div>
-
-            <div className="space-y-4">
-              {config === EXAMPLES.exercise12 ? (
-                <>
-                  <div className="p-4 rounded-lg bg-[#F8F8F7] border border-black/5">
-                    <h4 className="text-xs font-bold mb-1">
-                      Busy Beaver Problem
-                    </h4>
-                    <p className="text-[11px] leading-relaxed text-black/60">
-                      Entre todas las máquinas de Turing con n estados y k
-                      símbolos que haltan en una cinta en blanco, ¿cuál deja el
-                      máximo número de símbolos no-blancos? Ese es el busy
-                      beaver.
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-lg bg-[#F8F8F7] border border-black/5">
-                    <h4 className="text-xs font-bold mb-1">
-                      Fórmula de Máquinas Posibles
-                    </h4>
-                    <p className="text-[11px] leading-relaxed text-black/60 font-mono">
-                      (2k(n+1))^(nk)
-                    </p>
-                    <p className="text-[10px] leading-relaxed text-black/50 mt-2">
-                      Donde n = estados (sin contar halt), k = símbolos
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-lg bg-blue-50 border border-blue-100">
-                    <h4 className="text-xs font-bold mb-1 text-blue-900">
-                      Ejercicio 12
-                    </h4>
-                    <p className="text-[10px] leading-relaxed text-blue-800">
-                      Este busy beaver toma 21 pasos e imprime 5 símbolos.
-                      Observa cómo la máquina alterna entre estados, escribiendo
-                      y moviéndose estratégicamente.
-                    </p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="p-4 rounded-lg bg-[#F8F8F7] border border-black/5">
-                    <h4 className="text-xs font-bold mb-1">
-                      Máquina de Estados
-                    </h4>
-                    <p className="text-[11px] leading-relaxed text-black/60">
-                      Una máquina de Turing es un modelo matemático de
-                      computación que manipula símbolos en una cinta de acuerdo
-                      con una tabla de reglas.
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-lg bg-[#F8F8F7] border border-black/5">
-                    <h4 className="text-xs font-bold mb-1">
-                      Problema de la Parada
-                    </h4>
-                    <p className="text-[11px] leading-relaxed text-black/60">
-                      No existe un algoritmo general que pueda determinar si un
-                      programa se detendrá eventualmente o se ejecutará para
-                      siempre. Esta máquina explora ese límite.
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-lg bg-[#F8F8F7] border border-black/5">
-                    <h4 className="text-xs font-bold mb-1">
-                      Estado de Parada (Halt)
-                    </h4>
-                    <p className="text-[11px] leading-relaxed text-black/60">
-                      Es el estado terminal donde la máquina finaliza su
-                      ejecución. Indica que el cómputo ha terminado, ya sea
-                      porque se llegó a una solución (Aceptar/Rechazar) o porque
-                      no existen más reglas aplicables para la configuración
-                      actual.
-                    </p>
-                  </div>
-                </>
               )}
             </div>
           </section>
