@@ -9,19 +9,67 @@ export const busyBeaver4: TMConfig = {
   blankSymbol: "_",
   transitions: [
     // Estado A
-    { currentState: "A", readSymbol: "_", writeSymbol: "1", move: "R", nextState: "B" },
-    { currentState: "A", readSymbol: "1", writeSymbol: "1", move: "L", nextState: "B" },
-    
+    {
+      currentState: "A",
+      readSymbol: "_",
+      writeSymbol: "1",
+      move: "R",
+      nextState: "B",
+    },
+    {
+      currentState: "A",
+      readSymbol: "1",
+      writeSymbol: "1",
+      move: "L",
+      nextState: "B",
+    },
+
     // Estado B
-    { currentState: "B", readSymbol: "_", writeSymbol: "1", move: "L", nextState: "A" },
-    { currentState: "B", readSymbol: "1", writeSymbol: "_", move: "L", nextState: "C" },
-    
+    {
+      currentState: "B",
+      readSymbol: "_",
+      writeSymbol: "1",
+      move: "L",
+      nextState: "A",
+    },
+    {
+      currentState: "B",
+      readSymbol: "1",
+      writeSymbol: "_",
+      move: "L",
+      nextState: "C",
+    },
+
     // Estado C
-    { currentState: "C", readSymbol: "_", writeSymbol: "1", move: "R", nextState: "halt" },
-    { currentState: "C", readSymbol: "1", writeSymbol: "1", move: "L", nextState: "D" },
-    
+    {
+      currentState: "C",
+      readSymbol: "_",
+      writeSymbol: "1",
+      move: "R",
+      nextState: "halt",
+    },
+    {
+      currentState: "C",
+      readSymbol: "1",
+      writeSymbol: "1",
+      move: "L",
+      nextState: "D",
+    },
+
     // Estado D
-    { currentState: "D", readSymbol: "_", writeSymbol: "1", move: "R", nextState: "D" },
-    { currentState: "D", readSymbol: "1", writeSymbol: "_", move: "R", nextState: "A" },
+    {
+      currentState: "D",
+      readSymbol: "_",
+      writeSymbol: "1",
+      move: "R",
+      nextState: "D",
+    },
+    {
+      currentState: "D",
+      readSymbol: "1",
+      writeSymbol: "_",
+      move: "R",
+      nextState: "A",
+    },
   ],
 };

@@ -3,7 +3,7 @@ import { TMConfig } from "../types";
 export const palindrome: TMConfig = {
   title: "Verificador de palíndromos",
   description:
-    "Acepta si la cadena sobre {a,b} se lee igual de izquierda a derecha y viceversa (ej. abba). Va tachando símbolos en los extremos y comparando.",
+    "Acepta si la cadena sobre {a,b} se lee igual de izquierda a derecha y viceversa (ej. abba, aba, aa). Va tachando símbolos en los extremos y comparando. ⚠️ Solo funciona con los símbolos 'a' y 'b'.",
   tape: ["a", "b", "b", "a"],
   initialState: "q0",
   blankSymbol: "_",

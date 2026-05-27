@@ -2,6 +2,7 @@ import type { TMConfig } from "../types";
 
 import { binaryIncrement } from "./binaryIncrement";
 import { palindrome } from "./palindrome";
+import { palindromeGeneral } from "./palindromeGeneral";
 import { unaryAddition } from "./unaryAddition";
 import { repeat01 } from "./repeat01";
 import { copyOnes } from "./copyOnes";
@@ -20,6 +21,7 @@ import { binaryMultiplication } from "./binaryMultiplication";
 export const EXAMPLES: Record<string, TMConfig> = {
   binaryIncrement,
   palindrome,
+  palindromeGeneral,
   unaryAddition,
   repeat01,
   copyOnes,
