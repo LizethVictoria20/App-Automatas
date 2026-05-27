@@ -8,6 +8,14 @@ import { copyOnes } from "./copyOnes";
 import { divisibleBy3Binary } from "./divisibleBy3Binary";
 import { divisibleBy3Base10 } from "./divisibleBy3Base10";
 import { threeEqualLength } from "./threeEqualLength";
+import { equalStrings } from "./equalStrings";
+import { busyBeaver3 } from "./busyBeaver3";
+import { busyBeaver4 } from "./busyBeaver4";
+import { powersOfTwo } from "./powersOfTwo";
+import { multipliedLengths } from "./multipliedLengths";
+import { binaryAddition } from "./binaryAddition";
+import { unaryMultiplication } from "./unaryMultiplication";
+import { binaryMultiplication } from "./binaryMultiplication";
 
 export const EXAMPLES: Record<string, TMConfig> = {
   binaryIncrement,
@@ -18,4 +26,12 @@ export const EXAMPLES: Record<string, TMConfig> = {
   divisibleBy3Binary,
   divisibleBy3Base10,
   threeEqualLength,
+  equalStrings,
+  busyBeaver3,
+  busyBeaver4,
+  powersOfTwo,
+  multipliedLengths,
+  binaryAddition,
+  unaryMultiplication,
+  binaryMultiplication,
 };

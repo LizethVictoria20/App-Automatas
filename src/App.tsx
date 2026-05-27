@@ -709,14 +709,54 @@ export default function App() {
                         detail: "Este es un problema clásico que demuestra el poder de las Máquinas de Turing sobre otros autómatas. Verifica que una cadena tenga exactamente el mismo número de 'a', 'b' y 'c' en ese orden. Por ejemplo: 'aabbcc' es válida, pero 'aabbc' no."
                       },
                       { 
+                        name: "Cadenas Iguales", 
+                        id: "equalStrings",
+                        detail: "Verifica que dos palabras separadas por '#' sean exactamente iguales. Por ejemplo: 'abc#abc' es aceptado, pero 'abc#abd' es rechazado. La máquina compara carácter por carácter entre ambas cadenas."
+                      },
+                      { 
                         name: "Verificador de Palíndromos", 
                         id: "palindrome",
                         detail: "Determina si una palabra se lee igual de izquierda a derecha que de derecha a izquierda. Por ejemplo: '1001' es un palíndromo. La máquina compara el primer símbolo con el último, luego el segundo con el penúltimo, y así sucesivamente."
                       },
                       { 
+                        name: "Busy Beaver 3 Estados", 
+                        id: "busyBeaver3",
+                        detail: "El campeón BB(3) que escribe 6 unos en solo 14 pasos. Los 'Busy Beavers' son máquinas de Turing que compiten por escribir el máximo número de símbolos antes de detenerse. Son fascinantes en teoría de la computación."
+                      },
+                      { 
+                        name: "Busy Beaver 4 Estados", 
+                        id: "busyBeaver4",
+                        detail: "El campeón BB(4) que escribe 13 unos en 107 pasos increíbles. Este es el último Busy Beaver completamente verificado matemáticamente. Los de 5 estados o más aún son un misterio."
+                      },
+                      { 
+                        name: "Potencias de 2", 
+                        id: "powersOfTwo",
+                        detail: "Verifica si un número en notación unaria es una potencia de 2 (2, 4, 8, 16...). La máquina divide repetidamente el número por 2 hasta llegar a 1 o detectar que no es divisible uniformemente."
+                      },
+                      { 
+                        name: "Longitudes Multiplicadas (a^(m×n))", 
+                        id: "multipliedLengths",
+                        detail: "Acepta cadenas donde el número de 'a's es el producto de 'b's por 'c's. Ejemplo: 'bbcccaaaaaa' tiene 2 'b's, 3 'c's y 6 'a's (2×3=6). Demuestra capacidades computacionales avanzadas."
+                      },
+                      { 
+                        name: "Suma Binaria", 
+                        id: "binaryAddition",
+                        detail: "Suma dos números binarios separados por '+'. Ejemplo: '101+11' (5+3) produce '1000' (8). La máquina procesa de derecha a izquierda manejando acarreos como lo harías manualmente."
+                      },
+                      { 
                         name: "Suma Unaria", 
                         id: "unaryAddition",
-                        detail: "Suma dos números representados en notación unaria (usando '1's). Por ejemplo, '111+11' representa 3+2. La máquina cuenta todos los '1's y produce el resultado como una secuencia continua de '1's que representa la suma."
+                        detail: "Suma dos números representados en notación unaria (usando '1's). Por ejemplo, '111+11' representa 3+2=5. La máquina cuenta todos los '1's y produce el resultado como una secuencia continua."
+                      },
+                      { 
+                        name: "Multiplicación Unaria", 
+                        id: "unaryMultiplication",
+                        detail: "Multiplica dos números en notación unaria separados por '*'. Ejemplo: '111*11' (3×2) produce '111111' (6). La máquina copia el primer número tantas veces como indica el segundo número."
+                      },
+                      { 
+                        name: "Multiplicación Binaria", 
+                        id: "binaryMultiplication",
+                        detail: "Multiplica dos números binarios separados por '*'. Ejemplo: '11*10' (3×2) produce '110' (6). Utiliza el algoritmo de multiplicación binaria con desplazamientos y sumas, similar al método manual."
                       },
                     ].map((ex, i) => {
                       const meta = EXAMPLES[ex.id];

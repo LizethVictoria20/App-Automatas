@@ -1,6 +1,0 @@
-{
-  "name": "Maquina de Turing",
-  "description": "Un simulador interactivo de Máquinas de Turing con explicaciones potenciadas por IA, ejecución visual de cintas y ejercicios educativos.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
