@@ -10,15 +10,10 @@ import {
   Pause,
   SkipForward,
   RotateCcw,
-  Settings,
-  Save,
-  Download,
   Cpu,
   BookOpen,
   Plus,
   Trash2,
-  Share2,
-  ChevronRight,
   Info,
   Sparkles,
   Network,
@@ -30,7 +25,6 @@ import { TMConfig, TMState, Transition, Symbol } from "./types";
 import { EXAMPLES } from "./examples";
 import { cn } from "./lib/utils";
 import confetti from "canvas-confetti";
-import Markdown from "react-markdown";
 import StateGraph from "./components/StateGraph";
 
 // --- Components ---
@@ -45,7 +39,6 @@ const Header = () => (
             <Cpu size={22} />
           </div>
         </div>
-
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <h1 className="font-sans font-semibold tracking-tight text-lg sm:text-xl truncate">
@@ -60,7 +53,6 @@ const Header = () => (
           </p>
         </div>
       </div>
-
       <div className="flex items-center gap-3">
         <div className="flex -space-x-2">
           <div className="w-9 h-9 rounded-full border-2 border-white bg-linear-to-br from-blue-200 to-blue-50 flex items-center justify-center text-[10px] font-bold text-blue-900 shadow-sm">
@@ -96,7 +88,7 @@ const TapeComponent = ({
   ) {
     cells.push({
       index: i,
-      value: state.tape[i] || blankSymbol,
+      value: state.tape[i] !== undefined ? state.tape[i] : blankSymbol,
     });
   }
 
@@ -139,7 +131,6 @@ const TapeComponent = ({
 
   return (
     <div className="w-full flex flex-col items-center">
-      {/* Movement Direction Indicator */}
       {moveInfo && (
         <motion.div
           initial={{ opacity: 0, scale: 0.8, y: -10 }}
@@ -167,7 +158,6 @@ const TapeComponent = ({
             {cells.map((cell) => {
               const isHead = cell.index === state.headIndex;
               const wasRead = readIndices.has(cell.index) && !isHead;
-
               return (
                 <motion.div
                   key={cell.index}
@@ -196,7 +186,6 @@ const TapeComponent = ({
                       Cabezal
                     </div>
                   )}
-                  {/* Marca visual en celdas ya leídas */}
                   {wasRead && (
                     <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-amber-400 border border-amber-600" />
                   )}
@@ -206,7 +195,6 @@ const TapeComponent = ({
           </AnimatePresence>
         </div>
       </div>
-      {/* Leyenda */}
       <div className="flex items-center gap-4 mt-3 text-[10px] font-mono text-black/40 uppercase tracking-wider">
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-sm bg-black inline-block" />
@@ -221,15 +209,11 @@ const TapeComponent = ({
           Sin leer
         </span>
       </div>
-      {/* Pointer UI */}
-      <div className="absolute bottom-4 left-1/2 -ml-3 z-30">
-        <div className="w-0 h-0 bg-white  border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-10 border-b-pink"></div>
-      </div>
     </div>
   );
 };
 
-// Helper functions for example-specific guidance
+// Helper functions
 const getPlaceholderForExample = (exampleId: string): string => {
   const placeholders: Record<string, string> = {
     repeat01: "01",
@@ -296,9 +280,43 @@ const getValidSymbols = (exampleId: string): string[] => {
     divisibleBy3Base10: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
     threeEqualLength: ["a", "b", "c"],
     equalStrings: [
-      "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
-      "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
-      "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "#",
+      "a",
+      "b",
+      "c",
+      "d",
+      "e",
+      "f",
+      "g",
+      "h",
+      "i",
+      "j",
+      "k",
+      "l",
+      "m",
+      "n",
+      "o",
+      "p",
+      "q",
+      "r",
+      "s",
+      "t",
+      "u",
+      "v",
+      "w",
+      "x",
+      "y",
+      "z",
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "#",
     ],
     busyBeaver3: ["_", " "],
     busyBeaver4: ["_", " "],
@@ -317,14 +335,11 @@ const validateInput = (
   exampleId: string,
 ): { valid: boolean; message?: string; warning?: string } => {
   if (!exampleId) return { valid: true };
-
   const validSymbols = getValidSymbols(exampleId);
   if (validSymbols.length === 0) return { valid: true };
-
   const invalidChars = input
     .split("")
     .filter((char) => !validSymbols.includes(char));
-
   if (invalidChars.length > 0) {
     const uniqueInvalid = [...new Set(invalidChars)].join(", ");
     return {
@@ -332,7 +347,6 @@ const validateInput = (
       warning: `⚠️ Nota: La entrada contiene símbolos "${uniqueInvalid}" que podrían no tener transiciones definidas. Este ejercicio fue diseñado para: ${validSymbols.join(", ")}`,
     };
   }
-
   return { valid: true };
 };
 
@@ -347,7 +361,12 @@ const getQuickExamples = (exampleId: string): string[] => {
     equalStrings: ["abc#abc", "hola#hola", "test#test", "123#123"],
     palindrome: ["abba", "aba", "bab", "aa", "bb", "a"],
     palindromeGeneral: [
-      "reconocer", "anilina", "oso", "radar", "neuquen", "sometemos",
+      "reconocer",
+      "anilina",
+      "oso",
+      "radar",
+      "neuquen",
+      "sometemos",
     ],
     busyBeaver3: ["_"],
     busyBeaver4: ["_"],
@@ -365,7 +384,6 @@ const generateDynamicPalindromeTransitions = (
   inputSymbols: string[],
 ): TMConfig["transitions"] => {
   const uniqueSymbols = [...new Set(inputSymbols.filter((s) => s !== "_"))];
-
   if (uniqueSymbols.length === 0) {
     return [
       {
@@ -377,9 +395,7 @@ const generateDynamicPalindromeTransitions = (
       },
     ];
   }
-
   const transitions: TMConfig["transitions"] = [];
-
   uniqueSymbols.forEach((symbol) => {
     transitions.push({
       currentState: "q0",
@@ -389,7 +405,6 @@ const generateDynamicPalindromeTransitions = (
       nextState: `q_search_${symbol}`,
     });
   });
-
   transitions.push({
     currentState: "q0",
     readSymbol: "_",
@@ -397,7 +412,6 @@ const generateDynamicPalindromeTransitions = (
     move: "N",
     nextState: "accept",
   });
-
   transitions.push({
     currentState: "q0",
     readSymbol: "X",
@@ -405,7 +419,6 @@ const generateDynamicPalindromeTransitions = (
     move: "R",
     nextState: "q_skip",
   });
-
   uniqueSymbols.forEach((symbol) => {
     transitions.push({
       currentState: "q_skip",
@@ -415,7 +428,6 @@ const generateDynamicPalindromeTransitions = (
       nextState: "q_skip",
     });
   });
-
   transitions.push({
     currentState: "q_skip",
     readSymbol: "X",
@@ -423,7 +435,6 @@ const generateDynamicPalindromeTransitions = (
     move: "R",
     nextState: "q_skip",
   });
-
   transitions.push({
     currentState: "q_skip",
     readSymbol: "_",
@@ -431,11 +442,9 @@ const generateDynamicPalindromeTransitions = (
     move: "N",
     nextState: "accept",
   });
-
   uniqueSymbols.forEach((symbol) => {
     const searchState = `q_search_${symbol}`;
     const returnState = `q_return_${symbol}`;
-
     uniqueSymbols.forEach((otherSymbol) => {
       transitions.push({
         currentState: searchState,
@@ -445,7 +454,6 @@ const generateDynamicPalindromeTransitions = (
         nextState: searchState,
       });
     });
-
     transitions.push({
       currentState: searchState,
       readSymbol: "X",
@@ -453,7 +461,6 @@ const generateDynamicPalindromeTransitions = (
       move: "R",
       nextState: searchState,
     });
-
     transitions.push({
       currentState: searchState,
       readSymbol: "_",
@@ -461,7 +468,6 @@ const generateDynamicPalindromeTransitions = (
       move: "L",
       nextState: returnState,
     });
-
     transitions.push({
       currentState: returnState,
       readSymbol: symbol,
@@ -469,7 +475,6 @@ const generateDynamicPalindromeTransitions = (
       move: "L",
       nextState: "q_back",
     });
-
     uniqueSymbols.forEach((otherSymbol) => {
       if (otherSymbol !== symbol) {
         transitions.push({
@@ -481,7 +486,6 @@ const generateDynamicPalindromeTransitions = (
         });
       }
     });
-
     transitions.push({
       currentState: returnState,
       readSymbol: "X",
@@ -490,7 +494,6 @@ const generateDynamicPalindromeTransitions = (
       nextState: "reject",
     });
   });
-
   transitions.push({
     currentState: "q_back",
     readSymbol: "X",
@@ -498,7 +501,6 @@ const generateDynamicPalindromeTransitions = (
     move: "L",
     nextState: "q_back",
   });
-
   uniqueSymbols.forEach((symbol) => {
     transitions.push({
       currentState: "q_back",
@@ -508,7 +510,6 @@ const generateDynamicPalindromeTransitions = (
       nextState: "q_back",
     });
   });
-
   transitions.push({
     currentState: "q_back",
     readSymbol: "_",
@@ -516,168 +517,224 @@ const generateDynamicPalindromeTransitions = (
     move: "R",
     nextState: "q0",
   });
-
   return transitions;
 };
 
+// ─── Estado inicial de la máquina a partir de una config ───────────────────
+const buildInitialMachineState = (cfg: TMConfig): TMState => ({
+  tape: [...cfg.tape],
+  headIndex: 0,
+  currentState: cfg.initialState,
+  isRunning: false,
+  stepCount: 0,
+  isHalted: false,
+});
+
 export default function App() {
+  // config sólo cambia cuando el usuario selecciona un ejercicio o edita reglas/cinta
   const [config, setConfig] = useState<TMConfig>(EXAMPLES.binaryIncrement);
-  const [state, setState] = useState<TMState>({
-    tape: [...EXAMPLES.binaryIncrement.tape],
-    headIndex: 0,
-    currentState: EXAMPLES.binaryIncrement.initialState,
-    isRunning: false,
-    stepCount: 0,
-    isHalted: false,
-  });
+  // machineState es la ejecución en curso — NUNCA se resetea por efectos secundarios
+  const [machineState, setMachineState] = useState<TMState>(
+    buildInitialMachineState(EXAMPLES.binaryIncrement),
+  );
 
   const [speed, setSpeed] = useState(500);
   const [explanation, setExplanation] = useState<string>("");
   const [isExplaining, setIsExplaining] = useState(false);
   const [activeTab, setActiveTab] = useState<"rules" | "config">("rules");
-  const [selectedExampleId, setSelectedExampleId] = useState<string>("");
+  const [selectedExampleId, setSelectedExampleId] =
+    useState<string>("binaryIncrement");
   const [dynamicMode, setDynamicMode] = useState(false);
   const [lastMove, setLastMove] = useState<"L" | "R" | "N" | null>(null);
   const [readIndices, setReadIndices] = useState<Set<number>>(new Set());
 
+  // Refs para el loop de ejecución — evita stale closures
+  const machineStateRef = useRef(machineState);
+  const configRef = useRef(config);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const isRunningRef = useRef(false);
 
   useEffect(() => {
-    if (dynamicMode && !state.isRunning && state.stepCount === 0) {
-      const newTransitions = generateDynamicPalindromeTransitions(config.tape);
-      setConfig((prev) => ({
-        ...prev,
-        transitions: newTransitions,
-      }));
-    }
-  }, [config.tape, dynamicMode, state.isRunning, state.stepCount]);
-
+    machineStateRef.current = machineState;
+  }, [machineState]);
   useEffect(() => {
-    if (!state.isRunning && state.stepCount === 0) {
-      setState({
-        tape: [...config.tape],
-        headIndex: 0,
-        currentState: config.initialState,
-        isRunning: false,
-        stepCount: 0,
-        isHalted: false,
-      });
-      setExplanation("");
-    }
-  }, [config.tape, config.initialState, state.isRunning, state.stepCount]);
-
-  const reset = useCallback(() => {
-    setState({
-      tape: [...config.tape],
-      headIndex: 0,
-      currentState: config.initialState,
-      isRunning: false,
-      stepCount: 0,
-      isHalted: false,
-    });
-    setExplanation("");
-    setLastMove(null);
-    setReadIndices(new Set()); // Limpiar celdas leídas al reiniciar
+    configRef.current = config;
   }, [config]);
 
-  const exportLog = () => {
-    const log = `Turing Machine Log\nSteps: ${state.stepCount}\nFinal State: ${state.currentState}\nTape: ${state.tape.join("")}`;
-    const blob = new Blob([log], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `tm-log-${Date.now()}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  // ── Modo dinámico: regenerar transiciones solo cuando la cinta cambia y la
+  //    máquina NO está corriendo y no ha ejecutado pasos ──────────────────────
+  useEffect(() => {
+    if (!dynamicMode) return;
+    if (machineState.isRunning || machineState.stepCount > 0) return;
+    const newTransitions = generateDynamicPalindromeTransitions(config.tape);
+    setConfig((prev) => ({ ...prev, transitions: newTransitions }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config.tape, dynamicMode]);
 
-  const step = useCallback(async () => {
-    if (state.isHalted) return;
+  // ── Reset explícito ────────────────────────────────────────────────────────
+  const reset = useCallback((cfg?: TMConfig) => {
+    const targetConfig = cfg ?? configRef.current;
+    if (timerRef.current) clearInterval(timerRef.current);
+    isRunningRef.current = false;
+    const fresh = buildInitialMachineState(targetConfig);
+    setMachineState(fresh);
+    machineStateRef.current = fresh;
+    setExplanation("");
+    setLastMove(null);
+    setReadIndices(new Set());
+  }, []);
 
-    const currentSymbol = state.tape[state.headIndex] || config.blankSymbol;
-    const rule = config.transitions.find(
+  // ── Un paso de la máquina — usa refs para no quedar desactualizado ─────────
+  const stepOnce = useCallback(() => {
+    const st = machineStateRef.current;
+    const cfg = configRef.current;
+
+    if (st.isHalted) return;
+
+    const currentSymbol =
+      st.tape[st.headIndex] !== undefined
+        ? st.tape[st.headIndex]
+        : cfg.blankSymbol;
+
+    const rule = cfg.transitions.find(
       (t) =>
-        t.currentState === state.currentState && t.readSymbol === currentSymbol,
+        t.currentState === st.currentState && t.readSymbol === currentSymbol,
     );
 
     if (!rule) {
-      const finalState = state.currentState;
-      setState((prev) => ({ ...prev, isHalted: true, isRunning: false }));
+      // Sin regla → detener
+      const halted: TMState = { ...st, isHalted: true, isRunning: false };
+      setMachineState(halted);
+      machineStateRef.current = halted;
+      isRunningRef.current = false;
+      if (timerRef.current) clearInterval(timerRef.current);
 
       getExplanation(
-        finalState,
-        state.tape,
-        state.headIndex,
+        st.currentState,
+        st.tape,
+        st.headIndex,
         {
-          currentState: finalState,
+          currentState: st.currentState,
           readSymbol: currentSymbol,
           writeSymbol: currentSymbol,
           move: "N",
-          nextState: finalState,
+          nextState: st.currentState,
         },
-        finalState,
+        st.currentState,
         true,
       );
-
-      if (finalState === "accept") {
+      if (st.currentState === "accept")
         confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-      }
       return;
     }
 
-    const newTape = [...state.tape];
-    newTape[state.headIndex] = rule.writeSymbol;
+    // Aplicar transición
+    const newTape = [...st.tape];
+    newTape[st.headIndex] = rule.writeSymbol;
 
-    let newHeadIndex = state.headIndex;
-    if (rule.move === "L") newHeadIndex--;
-    if (rule.move === "R") newHeadIndex++;
+    let newHead = st.headIndex;
+    if (rule.move === "L") newHead--;
+    if (rule.move === "R") newHead++;
 
-    if (newHeadIndex < 0) {
-      newTape.unshift(config.blankSymbol);
-      newHeadIndex = 0;
-    } else if (newHeadIndex >= newTape.length) {
-      newTape.push(config.blankSymbol);
+    if (newHead < 0) {
+      newTape.unshift(cfg.blankSymbol);
+      newHead = 0;
+      // Ajustar readIndices: todos los índices se desplazan +1
+      setReadIndices((prev) => {
+        const shifted = new Set<number>();
+        prev.forEach((idx) => shifted.add(idx + 1));
+        shifted.add(1); // la celda que acabamos de leer (era índice 0, ahora es 1)
+        return shifted;
+      });
+    } else {
+      setReadIndices((prev) => new Set(prev).add(st.headIndex));
     }
 
-    const nextStateData: TMState = {
+    if (newHead >= newTape.length) newTape.push(cfg.blankSymbol);
+
+    const isHalted =
+      rule.nextState === "halt" ||
+      rule.nextState === "accept" ||
+      rule.nextState === "reject";
+
+    const next: TMState = {
       tape: newTape,
-      headIndex: newHeadIndex,
+      headIndex: newHead,
       currentState: rule.nextState,
-      isRunning: state.isRunning,
-      stepCount: state.stepCount + 1,
-      isHalted:
-        rule.nextState === "halt" ||
-        rule.nextState === "accept" ||
-        rule.nextState === "reject",
+      isRunning: !isHalted && st.isRunning,
+      stepCount: st.stepCount + 1,
+      isHalted,
     };
 
-    setState(nextStateData);
+    setMachineState(next);
+    machineStateRef.current = next;
     setLastMove(rule.move);
-    // Marcar la celda actual como leída antes de moverse
-    setReadIndices((prev) => new Set(prev).add(state.headIndex));
 
-    if (nextStateData.isHalted) {
-      if (nextStateData.currentState === "accept") {
+    if (isHalted) {
+      isRunningRef.current = false;
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (next.currentState === "accept")
         confetti({ particleCount: 150, spread: 100 });
-      }
       getExplanation(
-        state.currentState,
-        state.tape,
-        state.headIndex,
+        st.currentState,
+        st.tape,
+        st.headIndex,
         rule,
-        nextStateData.currentState,
+        next.currentState,
         true,
       );
-    } else if (selectedExampleId || Math.random() > 0.8) {
+    } else if (Math.random() > 0.85) {
       getExplanation(
-        state.currentState,
-        state.tape,
-        state.headIndex,
+        st.currentState,
+        st.tape,
+        st.headIndex,
         rule,
-        nextStateData.currentState,
+        next.currentState,
       );
     }
-  }, [state, config, selectedExampleId]);
+  }, []); // Sin dependencias — usa solo refs
+
+  // ── Timer de ejecución automática ─────────────────────────────────────────
+  const startTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      if (!isRunningRef.current || machineStateRef.current.isHalted) {
+        clearInterval(timerRef.current!);
+        return;
+      }
+      stepOnce();
+    }, speed);
+  }, [speed, stepOnce]);
+
+  const toggleRun = useCallback(() => {
+    if (machineState.isHalted) return;
+    const nowRunning = !isRunningRef.current;
+    isRunningRef.current = nowRunning;
+    setMachineState((prev) => ({ ...prev, isRunning: nowRunning }));
+    machineStateRef.current = {
+      ...machineStateRef.current,
+      isRunning: nowRunning,
+    };
+
+    if (nowRunning) {
+      startTimer();
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+  }, [machineState.isHalted, startTimer]);
+
+  // Cuando cambia speed y está corriendo, reinicar el timer con nueva velocidad
+  useEffect(() => {
+    if (isRunningRef.current) startTimer();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [speed]);
+
+  // Limpieza al desmontar
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
 
   const getExplanation = async (
     currState: string,
@@ -685,7 +742,7 @@ export default function App() {
     head: number,
     rule: Transition,
     nextState: string,
-    isHalt: boolean = false,
+    isHalt = false,
   ) => {
     try {
       setIsExplaining(true);
@@ -710,20 +767,6 @@ export default function App() {
       setIsExplaining(false);
     }
   };
-
-  useEffect(() => {
-    if (state.isRunning && !state.isHalted) {
-      timerRef.current = setInterval(step, speed);
-    } else {
-      if (timerRef.current) clearInterval(timerRef.current);
-    }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [state.isRunning, state.isHalted, step, speed]);
-
-  const toggleRun = () =>
-    setState((prev) => ({ ...prev, isRunning: !prev.isRunning }));
 
   const updateTransition = (
     index: number,
@@ -752,8 +795,43 @@ export default function App() {
   };
 
   const removeTransition = (index: number) => {
-    const newTransitions = config.transitions.filter((_, i) => i !== index);
-    setConfig((prev) => ({ ...prev, transitions: newTransitions }));
+    setConfig((prev) => ({
+      ...prev,
+      transitions: prev.transitions.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleExampleChange = (exampleId: string) => {
+    if (!exampleId || !EXAMPLES[exampleId]) {
+      setSelectedExampleId("");
+      return;
+    }
+    setSelectedExampleId(exampleId);
+    const example = EXAMPLES[exampleId];
+    const isDynamic = exampleId === "palindromeGeneral";
+    setDynamicMode(isDynamic);
+
+    let finalConfig = example;
+    if (isDynamic) {
+      finalConfig = {
+        ...example,
+        transitions: generateDynamicPalindromeTransitions(example.tape),
+      };
+    }
+    setConfig(finalConfig);
+    configRef.current = finalConfig;
+    reset(finalConfig);
+  };
+
+  const handleTapeChange = (newTapeStr: string) => {
+    const newTape = newTapeStr.split("");
+    const updatedConfig = { ...config, tape: newTape };
+    setConfig(updatedConfig);
+    configRef.current = updatedConfig;
+    // Solo resetear si la máquina no ha ejecutado pasos
+    if (machineState.stepCount === 0 && !machineState.isRunning) {
+      reset(updatedConfig);
+    }
   };
 
   return (
@@ -761,7 +839,6 @@ export default function App() {
       <Header />
 
       <main className="max-w-450 mx-auto p-8 flex flex-col gap-8">
-        {/* Main Content */}
         <div className="flex flex-col gap-8">
           {/* Machine Header */}
           <section className="bg-white p-6 rounded-xl border border-black/5 shadow-sm space-y-4">
@@ -773,43 +850,33 @@ export default function App() {
                 <p
                   className={cn(
                     "text-2xl font-semibold tracking-tight",
-                    state.currentState === "accept" && "text-green-600",
-                    state.currentState === "reject" && "text-red-600",
-                    state.isHalted &&
-                      state.stepCount === 0 &&
+                    machineState.currentState === "accept" && "text-green-600",
+                    machineState.currentState === "reject" && "text-red-600",
+                    machineState.isHalted &&
+                      machineState.stepCount === 0 &&
                       "text-orange-600",
                   )}
                 >
-                  {state.isHalted
-                    ? state.currentState === "accept"
+                  {machineState.isHalted
+                    ? machineState.currentState === "accept"
                       ? "Cadena Aceptada ✓"
-                      : state.currentState === "reject"
+                      : machineState.currentState === "reject"
                         ? "Cadena Rechazada ✗"
-                        : state.stepCount === 0
+                        : machineState.stepCount === 0
                           ? "Sin regla para comenzar - Verifica tu configuración"
                           : "Simulación Finalizada"
                     : "Ejecución del Simulador"}
                 </p>
               </div>
 
-              {/* Exercise Selector Dropdown */}
+              {/* Exercise Selector */}
               <div className="flex flex-col gap-2">
                 <label className="text-[10px] font-bold uppercase text-black/40 tracking-wider">
                   Seleccionar Ejercicio
                 </label>
                 <select
-                  value={selectedExampleId || ""}
-                  onChange={(e) => {
-                    const exampleId = e.target.value;
-                    if (exampleId && EXAMPLES[exampleId]) {
-                      setSelectedExampleId(exampleId);
-                      const example = EXAMPLES[exampleId];
-                      setConfig(example);
-                      setDynamicMode(exampleId === "palindromeGeneral");
-                    } else {
-                      setSelectedExampleId(null);
-                    }
-                  }}
+                  value={selectedExampleId}
+                  onChange={(e) => handleExampleChange(e.target.value)}
                   className="min-w-70 px-4 py-2.5 bg-white border-2 border-black/10 rounded-lg font-medium text-sm hover:border-black/30 focus:outline-none focus:ring-2 focus:ring-black/20 transition-all cursor-pointer"
                 >
                   <option value="">-- Ejercicios Disponibles --</option>
@@ -863,7 +930,7 @@ export default function App() {
                     Estado
                   </span>
                   <span className="font-mono font-medium px-3 py-1 bg-black text-white rounded-sm">
-                    {state.currentState}
+                    {machineState.currentState}
                   </span>
                 </div>
                 <div className="flex flex-col items-end border-l border-black/10 pl-4 ml-2">
@@ -871,13 +938,12 @@ export default function App() {
                     Pasos
                   </span>
                   <span className="font-mono font-medium">
-                    {state.stepCount}
+                    {machineState.stepCount}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Selected Exercise Info */}
             {selectedExampleId && EXAMPLES[selectedExampleId]?.description && (
               <div className="p-4 rounded-lg bg-blue-50 border border-blue-200 flex items-start gap-3">
                 <BookOpen size={16} className="text-blue-600 mt-0.5 shrink-0" />
@@ -892,7 +958,7 @@ export default function App() {
               </div>
             )}
 
-            {state.isHalted && state.stepCount === 0 && (
+            {machineState.isHalted && machineState.stepCount === 0 && (
               <div className="p-4 rounded-lg bg-orange-50 border border-orange-200 flex items-start gap-3">
                 <Info size={18} className="text-orange-600 mt-0.5 shrink-0" />
                 <div className="space-y-2">
@@ -901,32 +967,16 @@ export default function App() {
                   </p>
                   <p className="text-xs text-orange-700 leading-relaxed">
                     La máquina no tiene una regla definida para el estado{" "}
-                    <strong>"{state.currentState}"</strong> leyendo el símbolo{" "}
+                    <strong>"{machineState.currentState}"</strong> leyendo el
+                    símbolo{" "}
                     <strong>
-                      "{state.tape[state.headIndex] || config.blankSymbol}"
+                      "
+                      {machineState.tape[machineState.headIndex] ??
+                        config.blankSymbol}
+                      "
                     </strong>
                     .
                   </p>
-                  {selectedExampleId &&
-                    (() => {
-                      const validation = validateInput(
-                        config.tape.join(""),
-                        selectedExampleId,
-                      );
-                      if (validation.warning) {
-                        return (
-                          <div className="pt-2 mt-2 border-t border-orange-300">
-                            <p className="text-xs text-orange-800 leading-relaxed">
-                              <strong>💡 Nota:</strong> Este ejercicio fue
-                              diseñado para símbolos específicos, pero puedes
-                              experimentar con cualquier entrada. Simplemente no
-                              hay una transición definida para este caso.
-                            </p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
                   <p className="text-xs text-orange-600 leading-relaxed pt-1">
                     {selectedExampleId
                       ? "Puedes probar con otra entrada o agregar tus propias reglas en la pestaña Reglas."
@@ -941,43 +991,46 @@ export default function App() {
           <div className="flex flex-col lg:flex-row gap-8">
             {/* Left Column */}
             <div className="flex-1 flex flex-col gap-8">
-              {/* Tape Visualization */}
+              {/* Tape */}
               <section className="bg-white rounded-xl border border-black/5 shadow-md overflow-hidden relative">
                 <TapeComponent
-                  state={state}
+                  state={machineState}
                   blankSymbol={config.blankSymbol}
                   lastMove={lastMove}
                   readIndices={readIndices}
                 />
 
-                {/* Controls Bar */}
+                {/* Controls */}
                 <div className="px-8 py-6 flex items-center justify-between bg-white border-t border-black/5">
                   <div className="flex items-center gap-3">
                     <button
                       onClick={toggleRun}
-                      disabled={state.isHalted}
+                      disabled={machineState.isHalted}
                       className={cn(
                         "w-12 h-12 rounded-full flex items-center justify-center transition-all",
-                        state.isRunning
+                        machineState.isRunning
                           ? "bg-slate-100 text-black hover:bg-slate-200"
                           : "bg-black text-white hover:scale-105 active:scale-95 disabled:bg-slate-200",
                       )}
                     >
-                      {state.isRunning ? (
+                      {machineState.isRunning ? (
                         <Pause size={20} fill="currentColor" />
                       ) : (
                         <Play size={20} fill="currentColor" className="ml-1" />
                       )}
                     </button>
                     <button
-                      onClick={step}
-                      disabled={state.isRunning || state.isHalted}
+                      onClick={() => {
+                        if (!machineState.isRunning && !machineState.isHalted)
+                          stepOnce();
+                      }}
+                      disabled={machineState.isRunning || machineState.isHalted}
                       className="w-12 h-12 rounded-full border border-black/10 flex items-center justify-center hover:bg-black hover:text-white transition-all disabled:opacity-30"
                     >
                       <SkipForward size={20} />
                     </button>
                     <button
-                      onClick={reset}
+                      onClick={() => reset()}
                       className="w-12 h-12 rounded-full border border-black/10 flex items-center justify-center hover:bg-black hover:text-white transition-all"
                     >
                       <RotateCcw size={20} />
@@ -1006,7 +1059,7 @@ export default function App() {
                 </div>
               </section>
 
-              {/* Tabbed Configuration */}
+              {/* Config Tabs */}
               <section className="bg-white rounded-xl border border-black/5 shadow-sm overflow-hidden flex flex-col h-125">
                 <div className="flex border-b border-black/5">
                   {[
@@ -1048,12 +1101,6 @@ export default function App() {
                     <div className="space-y-4">
                       <div className="flex justify-between items-center mb-4">
                         <h3 className="font-medium">Tabla de Transiciones</h3>
-                        <button
-                          onClick={addTransition}
-                          className="flex items-center gap-2 text-[10px] font-bold uppercase py-2 px-4 border border-black/10 rounded-full hover:bg-black hover:text-white transition-colors"
-                        >
-                          <Plus size={14} /> Añadir Regla
-                        </button>
                       </div>
                       <table className="w-full text-left text-sm border-collapse">
                         <thead>
@@ -1078,7 +1125,11 @@ export default function App() {
                                   className="w-20 bg-transparent outline-none focus:bg-white focus:ring-1 focus:ring-black font-bold text-blue-700"
                                   value={t.currentState}
                                   onChange={(e) =>
-                                    updateTransition(i, "currentState", e.target.value)
+                                    updateTransition(
+                                      i,
+                                      "currentState",
+                                      e.target.value,
+                                    )
                                   }
                                 />
                               </td>
@@ -1087,7 +1138,11 @@ export default function App() {
                                   className="w-8 bg-transparent outline-none focus:bg-white focus:ring-1 focus:ring-black text-center border-x border-black/5"
                                   value={t.readSymbol}
                                   onChange={(e) =>
-                                    updateTransition(i, "readSymbol", e.target.value)
+                                    updateTransition(
+                                      i,
+                                      "readSymbol",
+                                      e.target.value,
+                                    )
                                   }
                                 />
                               </td>
@@ -1096,7 +1151,11 @@ export default function App() {
                                   className="w-8 bg-transparent outline-none focus:bg-white focus:ring-1 focus:ring-black text-center border-x border-black/5"
                                   value={t.writeSymbol}
                                   onChange={(e) =>
-                                    updateTransition(i, "writeSymbol", e.target.value)
+                                    updateTransition(
+                                      i,
+                                      "writeSymbol",
+                                      e.target.value,
+                                    )
                                   }
                                 />
                               </td>
@@ -1105,7 +1164,11 @@ export default function App() {
                                   className="bg-transparent outline-none cursor-pointer font-bold px-1"
                                   value={t.move}
                                   onChange={(e) =>
-                                    updateTransition(i, "move", e.target.value as any)
+                                    updateTransition(
+                                      i,
+                                      "move",
+                                      e.target.value as any,
+                                    )
                                   }
                                 >
                                   <option value="L">L</option>
@@ -1119,7 +1182,11 @@ export default function App() {
                                   className="w-20 bg-transparent outline-none focus:bg-white focus:ring-1 focus:ring-black font-medium text-slate-600"
                                   value={t.nextState}
                                   onChange={(e) =>
-                                    updateTransition(i, "nextState", e.target.value)
+                                    updateTransition(
+                                      i,
+                                      "nextState",
+                                      e.target.value,
+                                    )
                                   }
                                 />
                               </td>
@@ -1143,16 +1210,20 @@ export default function App() {
                       {selectedExampleId && (
                         <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
                           <div className="flex items-start gap-2">
-                            <BookOpen size={16} className="text-blue-600 mt-0.5 shrink-0" />
+                            <BookOpen
+                              size={16}
+                              className="text-blue-600 mt-0.5 shrink-0"
+                            />
                             <div className="space-y-2">
                               <p className="text-sm font-bold text-blue-900">
-                                Ejercicio activo: {EXAMPLES[selectedExampleId]?.title}
+                                Ejercicio activo:{" "}
+                                {EXAMPLES[selectedExampleId]?.title}
                               </p>
                               <p className="text-[11px] text-blue-700 leading-relaxed">
-                                <strong>✨ Entrada libre:</strong> Puedes escribir cualquier
-                                cadena que desues experimentar. Los cambios se aplican
-                                automáticamente. Si usas símbolos no definidos en las reglas,
-                                simplemente la máquina se detendrá cuando los encuentre.
+                                <strong>✨ Entrada libre:</strong> Puedes
+                                escribir cualquier cadena para experimentar. Los
+                                cambios se aplican automáticamente antes de
+                                ejecutar.
                               </p>
                             </div>
                           </div>
@@ -1161,26 +1232,28 @@ export default function App() {
 
                       <div className="p-4 rounded-lg bg-green-50 border border-green-200">
                         <div className="flex items-start gap-2">
-                          <Sparkles size={16} className="text-green-600 mt-0.5 shrink-0" />
+                          <Sparkles
+                            size={16}
+                            className="text-green-600 mt-0.5 shrink-0"
+                          />
                           <div className="space-y-1">
                             <p className="text-[11px] text-green-800 leading-relaxed">
-                              Los cambios en la configuración se aplican{" "}
-                              <strong>automáticamente</strong> cuando la máquina está en
-                              estado inicial (sin pasos ejecutados).
-                            </p>
-                            <p className="text-[10px] text-green-700 leading-relaxed">
-                              💡 <strong>Tip:</strong> Experimenta libremente con cualquier
-                              entrada. El simulador te dirá si no hay reglas definidas para
-                              ciertos símbolos.
+                              Los cambios en la cinta se aplican{" "}
+                              <strong>automáticamente</strong> cuando la máquina
+                              aún no ha ejecutado pasos. Si ya ejecutó, reinicia
+                              primero.
                             </p>
                           </div>
                         </div>
                       </div>
 
-                      {/* Toggle de Modo Dinámico */}
+                      {/* Toggle Modo Dinámico */}
                       <div className="p-4 rounded-lg bg-purple-50 border border-purple-200">
                         <div className="flex items-start gap-3">
-                          <Sparkles size={16} className="text-purple-600 mt-0.5 shrink-0" />
+                          <Sparkles
+                            size={16}
+                            className="text-purple-600 mt-0.5 shrink-0"
+                          />
                           <div className="flex-1 space-y-2">
                             <div className="flex items-center justify-between">
                               <div>
@@ -1188,9 +1261,8 @@ export default function App() {
                                   🎨 Modo Transiciones Dinámicas
                                 </p>
                                 <p className="text-[10px] text-purple-700 leading-relaxed mt-1">
-                                  Genera automáticamente las reglas de transición basadas en
-                                  los símbolos de tu entrada. Perfecto para verificar
-                                  palíndromos con cualquier palabra.
+                                  Genera automáticamente las reglas basadas en
+                                  los símbolos de tu entrada.
                                 </p>
                               </div>
                               <button
@@ -1203,7 +1275,9 @@ export default function App() {
                                 <span
                                   className={cn(
                                     "absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-200",
-                                    dynamicMode ? "translate-x-7" : "translate-x-0",
+                                    dynamicMode
+                                      ? "translate-x-7"
+                                      : "translate-x-0",
                                   )}
                                 />
                               </button>
@@ -1211,14 +1285,10 @@ export default function App() {
                             {dynamicMode && (
                               <div className="p-2 bg-purple-100 rounded-lg border border-purple-300">
                                 <p className="text-[10px] text-purple-800 leading-relaxed">
-                                  ✅ <strong>Activo:</strong> Las transiciones se generarán
-                                  automáticamente para verificar si tu entrada es un
-                                  palíndromo. Cambia la cinta y las reglas se actualizarán.
-                                  <br />
+                                  ✅ <strong>Activo:</strong> Transiciones
+                                  generadas automáticamente.{" "}
                                   <span className="text-[9px] text-purple-600">
-                                    Transiciones actuales:{" "}
-                                    <strong>{config.transitions.length}</strong> reglas
-                                    generadas
+                                    {config.transitions.length} reglas actuales.
                                   </span>
                                 </p>
                               </div>
@@ -1234,30 +1304,29 @@ export default function App() {
                         <input
                           className="w-full p-4 bg-black/5 rounded-lg font-mono text-base outline-none focus:ring-2 focus:ring-black"
                           value={config.tape.join("")}
-                          onChange={(e) =>
-                            setConfig((prev) => ({
-                              ...prev,
-                              tape: e.target.value.split(""),
-                            }))
-                          }
-                          placeholder={getPlaceholderForExample(selectedExampleId)}
+                          onChange={(e) => handleTapeChange(e.target.value)}
+                          placeholder={getPlaceholderForExample(
+                            selectedExampleId,
+                          )}
                         />
                         {selectedExampleId &&
                           (() => {
-                            const validation = validateInput(
+                            const v = validateInput(
                               config.tape.join(""),
                               selectedExampleId,
                             );
-                            if (validation.warning) {
+                            if (v.warning)
                               return (
                                 <div className="p-3 rounded-lg bg-yellow-50 border border-yellow-200 flex items-start gap-2">
-                                  <Info size={14} className="text-yellow-600 mt-0.5 shrink-0" />
+                                  <Info
+                                    size={14}
+                                    className="text-yellow-600 mt-0.5 shrink-0"
+                                  />
                                   <p className="text-[10px] text-yellow-800 leading-relaxed">
-                                    {validation.warning}
+                                    {v.warning}
                                   </p>
                                 </div>
                               );
-                            }
                             return null;
                           })()}
                         <p className="text-[10px] text-slate-500 leading-relaxed">
@@ -1272,23 +1341,21 @@ export default function App() {
                               Pruebas Rápidas
                             </label>
                             <div className="flex flex-wrap gap-2">
-                              {getQuickExamples(selectedExampleId).map((example, idx) => (
-                                <button
-                                  key={idx}
-                                  onClick={() => {
-                                    setConfig((prev) => ({
-                                      ...prev,
-                                      tape: example.split(""),
-                                    }));
-                                  }}
-                                  className="px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg font-mono text-xs transition-all"
-                                >
-                                  {example}
-                                </button>
-                              ))}
+                              {getQuickExamples(selectedExampleId).map(
+                                (example, idx) => (
+                                  <button
+                                    key={idx}
+                                    onClick={() => handleTapeChange(example)}
+                                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg font-mono text-xs transition-all"
+                                  >
+                                    {example}
+                                  </button>
+                                ),
+                              )}
                             </div>
                             <p className="text-[10px] text-slate-500 leading-relaxed">
-                              Haz clic en un ejemplo para cargarlo automáticamente
+                              Haz clic en un ejemplo para cargarlo
+                              automáticamente
                             </p>
                           </div>
                         )}
@@ -1310,17 +1377,21 @@ export default function App() {
                         />
                       </div>
 
-                      {(state.stepCount > 0 || state.isRunning) && (
+                      {(machineState.stepCount > 0 ||
+                        machineState.isRunning) && (
                         <div className="p-4 rounded-lg bg-amber-50 border border-amber-200">
                           <div className="flex items-start gap-2">
-                            <Info size={16} className="text-amber-600 mt-0.5 shrink-0" />
+                            <Info
+                              size={16}
+                              className="text-amber-600 mt-0.5 shrink-0"
+                            />
                             <div className="space-y-2">
                               <p className="text-[11px] text-amber-800 leading-relaxed">
-                                La máquina está en ejecución o ya ha ejecutado pasos. Para
-                                aplicar los cambios de configuración, debes reiniciarla.
+                                La máquina ya ha ejecutado pasos. Para cambiar
+                                la entrada debes reiniciarla.
                               </p>
                               <button
-                                onClick={reset}
+                                onClick={() => reset()}
                                 className="w-full flex items-center justify-center gap-2 py-2 bg-amber-600 text-white rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-amber-700 transition-all"
                               >
                                 <RotateCcw size={14} /> Reiniciar Máquina
@@ -1354,7 +1425,7 @@ export default function App() {
                 <div className="h-150">
                   <StateGraph
                     transitions={config.transitions}
-                    currentState={state.currentState}
+                    currentState={machineState.currentState}
                     initialState={config.initialState}
                   />
                 </div>
