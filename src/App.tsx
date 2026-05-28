@@ -79,10 +79,12 @@ const TapeComponent = ({
   state,
   blankSymbol,
   lastMove,
+  readIndices,
 }: {
   state: TMState;
   blankSymbol: Symbol;
   lastMove: "L" | "R" | "N" | null;
+  readIndices: Set<number>;
 }) => {
   const visibleRange = 10;
   const cells = [];
@@ -162,36 +164,62 @@ const TapeComponent = ({
         <div className="absolute top-0 left-1/2 -ml-px w-px h-full bg-black/10 z-0"></div>
         <div className="flex justify-center items-center gap-2">
           <AnimatePresence initial={false}>
-            {cells.map((cell) => (
-              <motion.div
-                key={cell.index}
-                layout
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{
-                  opacity: 1,
-                  scale: cell.index === state.headIndex ? 1.1 : 1,
-                  x: (cell.index - state.headIndex) * 64,
-                  zIndex: cell.index === state.headIndex ? 20 : 10,
-                }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ type: "spring", duration: 0.5, bounce: 0.3 }}
-                className={cn(
-                  "absolute w-14 h-14 flex items-center justify-center border font-mono text-lg transition-colors",
-                  cell.index === state.headIndex
-                    ? "bg-black text-white border-black shadow-xl"
-                    : "bg-white text-black border-black/10",
-                )}
-              >
-                {cell.value}
-                {cell.index === state.headIndex && (
-                  <div className="absolute -top-8 text-[10px] font-bold text-black uppercase tracking-tighter">
-                    Cabezal
-                  </div>
-                )}
-              </motion.div>
-            ))}
+            {cells.map((cell) => {
+              const isHead = cell.index === state.headIndex;
+              const wasRead = readIndices.has(cell.index) && !isHead;
+
+              return (
+                <motion.div
+                  key={cell.index}
+                  layout
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{
+                    opacity: 1,
+                    scale: isHead ? 1.1 : 1,
+                    x: (cell.index - state.headIndex) * 64,
+                    zIndex: isHead ? 20 : 10,
+                  }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ type: "spring", duration: 0.5, bounce: 0.3 }}
+                  className={cn(
+                    "absolute w-14 h-14 flex items-center justify-center border font-mono text-lg transition-colors",
+                    isHead
+                      ? "bg-black text-white border-black shadow-xl"
+                      : wasRead
+                        ? "bg-amber-100 text-amber-900 border-amber-400 shadow-md"
+                        : "bg-white text-black border-black/10",
+                  )}
+                >
+                  {cell.value}
+                  {isHead && (
+                    <div className="absolute -top-8 text-[10px] font-bold text-black uppercase tracking-tighter">
+                      Cabezal
+                    </div>
+                  )}
+                  {/* Marca visual en celdas ya leídas */}
+                  {wasRead && (
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-amber-400 border border-amber-600" />
+                  )}
+                </motion.div>
+              );
+            })}
           </AnimatePresence>
         </div>
+      </div>
+      {/* Leyenda */}
+      <div className="flex items-center gap-4 mt-3 text-[10px] font-mono text-black/40 uppercase tracking-wider">
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-sm bg-black inline-block" />
+          Cabezal actual
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-sm bg-amber-100 border border-amber-400 inline-block" />
+          Ya leída
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-sm bg-white border border-black/10 inline-block" />
+          Sin leer
+        </span>
       </div>
       {/* Pointer UI */}
       <div className="absolute bottom-4 left-1/2 -ml-3 z-30">
@@ -268,43 +296,9 @@ const getValidSymbols = (exampleId: string): string[] => {
     divisibleBy3Base10: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
     threeEqualLength: ["a", "b", "c"],
     equalStrings: [
-      "a",
-      "b",
-      "c",
-      "d",
-      "e",
-      "f",
-      "g",
-      "h",
-      "i",
-      "j",
-      "k",
-      "l",
-      "m",
-      "n",
-      "o",
-      "p",
-      "q",
-      "r",
-      "s",
-      "t",
-      "u",
-      "v",
-      "w",
-      "x",
-      "y",
-      "z",
-      "0",
-      "1",
-      "2",
-      "3",
-      "4",
-      "5",
-      "6",
-      "7",
-      "8",
-      "9",
-      "#",
+      "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
+      "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
+      "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "#",
     ],
     busyBeaver3: ["_", " "],
     busyBeaver4: ["_", " "],
@@ -334,7 +328,7 @@ const validateInput = (
   if (invalidChars.length > 0) {
     const uniqueInvalid = [...new Set(invalidChars)].join(", ");
     return {
-      valid: true, // ¡Permitir cualquier entrada!
+      valid: true,
       warning: `⚠️ Nota: La entrada contiene símbolos "${uniqueInvalid}" que podrían no tener transiciones definidas. Este ejercicio fue diseñado para: ${validSymbols.join(", ")}`,
     };
   }
@@ -353,12 +347,7 @@ const getQuickExamples = (exampleId: string): string[] => {
     equalStrings: ["abc#abc", "hola#hola", "test#test", "123#123"],
     palindrome: ["abba", "aba", "bab", "aa", "bb", "a"],
     palindromeGeneral: [
-      "reconocer",
-      "anilina",
-      "oso",
-      "radar",
-      "neuquen",
-      "sometemos",
+      "reconocer", "anilina", "oso", "radar", "neuquen", "sometemos",
     ],
     busyBeaver3: ["_"],
     busyBeaver4: ["_"],
@@ -372,11 +361,9 @@ const getQuickExamples = (exampleId: string): string[] => {
   return examples[exampleId] || [];
 };
 
-// Función para generar transiciones dinámicas de palíndromo basadas en los símbolos de entrada
 const generateDynamicPalindromeTransitions = (
   inputSymbols: string[],
 ): TMConfig["transitions"] => {
-  // Obtener símbolos únicos de la entrada
   const uniqueSymbols = [...new Set(inputSymbols.filter((s) => s !== "_"))];
 
   if (uniqueSymbols.length === 0) {
@@ -393,7 +380,6 @@ const generateDynamicPalindromeTransitions = (
 
   const transitions: TMConfig["transitions"] = [];
 
-  // Estado inicial: marcar el primer símbolo
   uniqueSymbols.forEach((symbol) => {
     transitions.push({
       currentState: "q0",
@@ -404,7 +390,6 @@ const generateDynamicPalindromeTransitions = (
     });
   });
 
-  // Si encuentra blanco al inicio, acepta (cadena vacía o ya procesada)
   transitions.push({
     currentState: "q0",
     readSymbol: "_",
@@ -413,7 +398,6 @@ const generateDynamicPalindromeTransitions = (
     nextState: "accept",
   });
 
-  // Si encuentra X al inicio, salta
   transitions.push({
     currentState: "q0",
     readSymbol: "X",
@@ -422,7 +406,6 @@ const generateDynamicPalindromeTransitions = (
     nextState: "q_skip",
   });
 
-  // Estado para saltar las X's
   uniqueSymbols.forEach((symbol) => {
     transitions.push({
       currentState: "q_skip",
@@ -449,12 +432,10 @@ const generateDynamicPalindromeTransitions = (
     nextState: "accept",
   });
 
-  // Para cada símbolo, crear estados de búsqueda
   uniqueSymbols.forEach((symbol) => {
     const searchState = `q_search_${symbol}`;
     const returnState = `q_return_${symbol}`;
 
-    // Avanzar sobre cualquier símbolo mientras busca el final
     uniqueSymbols.forEach((otherSymbol) => {
       transitions.push({
         currentState: searchState,
@@ -473,7 +454,6 @@ const generateDynamicPalindromeTransitions = (
       nextState: searchState,
     });
 
-    // Cuando llega al final, retrocede
     transitions.push({
       currentState: searchState,
       readSymbol: "_",
@@ -482,7 +462,6 @@ const generateDynamicPalindromeTransitions = (
       nextState: returnState,
     });
 
-    // Verifica que el último símbolo coincida
     transitions.push({
       currentState: returnState,
       readSymbol: symbol,
@@ -491,7 +470,6 @@ const generateDynamicPalindromeTransitions = (
       nextState: "q_back",
     });
 
-    // Si no coincide, rechaza
     uniqueSymbols.forEach((otherSymbol) => {
       if (otherSymbol !== symbol) {
         transitions.push({
@@ -504,7 +482,6 @@ const generateDynamicPalindromeTransitions = (
       }
     });
 
-    // Si encuentra X ya marcado, rechaza
     transitions.push({
       currentState: returnState,
       readSymbol: "X",
@@ -514,7 +491,6 @@ const generateDynamicPalindromeTransitions = (
     });
   });
 
-  // Estado para regresar al inicio
   transitions.push({
     currentState: "q_back",
     readSymbol: "X",
@@ -555,17 +531,17 @@ export default function App() {
     isHalted: false,
   });
 
-  const [speed, setSpeed] = useState(500); // ms
+  const [speed, setSpeed] = useState(500);
   const [explanation, setExplanation] = useState<string>("");
   const [isExplaining, setIsExplaining] = useState(false);
   const [activeTab, setActiveTab] = useState<"rules" | "config">("rules");
   const [selectedExampleId, setSelectedExampleId] = useState<string>("");
-  const [dynamicMode, setDynamicMode] = useState(false); // Modo de transiciones dinámicas
-  const [lastMove, setLastMove] = useState<"L" | "R" | "N" | null>(null); // Última dirección de movimiento
+  const [dynamicMode, setDynamicMode] = useState(false);
+  const [lastMove, setLastMove] = useState<"L" | "R" | "N" | null>(null);
+  const [readIndices, setReadIndices] = useState<Set<number>>(new Set());
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Efecto para actualizar transiciones dinámicamente cuando cambia la entrada
   useEffect(() => {
     if (dynamicMode && !state.isRunning && state.stepCount === 0) {
       const newTransitions = generateDynamicPalindromeTransitions(config.tape);
@@ -576,9 +552,7 @@ export default function App() {
     }
   }, [config.tape, dynamicMode, state.isRunning, state.stepCount]);
 
-  // Auto-apply config changes to state when config changes
   useEffect(() => {
-    // Only reset if machine is not running and hasn't made progress
     if (!state.isRunning && state.stepCount === 0) {
       setState({
         tape: [...config.tape],
@@ -602,7 +576,8 @@ export default function App() {
       isHalted: false,
     });
     setExplanation("");
-    setLastMove(null); // Limpiar el indicador de dirección
+    setLastMove(null);
+    setReadIndices(new Set()); // Limpiar celdas leídas al reiniciar
   }, [config]);
 
   const exportLog = () => {
@@ -629,7 +604,6 @@ export default function App() {
       const finalState = state.currentState;
       setState((prev) => ({ ...prev, isHalted: true, isRunning: false }));
 
-      // Get AI to explain the halt reason
       getExplanation(
         finalState,
         state.tape,
@@ -658,7 +632,6 @@ export default function App() {
     if (rule.move === "L") newHeadIndex--;
     if (rule.move === "R") newHeadIndex++;
 
-    // Ensure state.tape has enough breadth
     if (newHeadIndex < 0) {
       newTape.unshift(config.blankSymbol);
       newHeadIndex = 0;
@@ -679,7 +652,9 @@ export default function App() {
     };
 
     setState(nextStateData);
-    setLastMove(rule.move); // Guardar la dirección del último movimiento
+    setLastMove(rule.move);
+    // Marcar la celda actual como leída antes de moverse
+    setReadIndices((prev) => new Set(prev).add(state.headIndex));
 
     if (nextStateData.isHalted) {
       if (nextStateData.currentState === "accept") {
@@ -962,9 +937,9 @@ export default function App() {
             )}
           </section>
 
-          {/* Two Column Layout: Left = Tape+Config, Right = State Graph */}
+          {/* Two Column Layout */}
           <div className="flex flex-col lg:flex-row gap-8">
-            {/* Left Column: Tape and Configuration */}
+            {/* Left Column */}
             <div className="flex-1 flex flex-col gap-8">
               {/* Tape Visualization */}
               <section className="bg-white rounded-xl border border-black/5 shadow-md overflow-hidden relative">
@@ -972,6 +947,7 @@ export default function App() {
                   state={state}
                   blankSymbol={config.blankSymbol}
                   lastMove={lastMove}
+                  readIndices={readIndices}
                 />
 
                 {/* Controls Bar */}
@@ -1030,7 +1006,7 @@ export default function App() {
                 </div>
               </section>
 
-              {/* Sidebar Area: Tabbed Configuration */}
+              {/* Tabbed Configuration */}
               <section className="bg-white rounded-xl border border-black/5 shadow-sm overflow-hidden flex flex-col h-125">
                 <div className="flex border-b border-black/5">
                   {[
@@ -1102,11 +1078,7 @@ export default function App() {
                                   className="w-20 bg-transparent outline-none focus:bg-white focus:ring-1 focus:ring-black font-bold text-blue-700"
                                   value={t.currentState}
                                   onChange={(e) =>
-                                    updateTransition(
-                                      i,
-                                      "currentState",
-                                      e.target.value,
-                                    )
+                                    updateTransition(i, "currentState", e.target.value)
                                   }
                                 />
                               </td>
@@ -1115,11 +1087,7 @@ export default function App() {
                                   className="w-8 bg-transparent outline-none focus:bg-white focus:ring-1 focus:ring-black text-center border-x border-black/5"
                                   value={t.readSymbol}
                                   onChange={(e) =>
-                                    updateTransition(
-                                      i,
-                                      "readSymbol",
-                                      e.target.value,
-                                    )
+                                    updateTransition(i, "readSymbol", e.target.value)
                                   }
                                 />
                               </td>
@@ -1128,11 +1096,7 @@ export default function App() {
                                   className="w-8 bg-transparent outline-none focus:bg-white focus:ring-1 focus:ring-black text-center border-x border-black/5"
                                   value={t.writeSymbol}
                                   onChange={(e) =>
-                                    updateTransition(
-                                      i,
-                                      "writeSymbol",
-                                      e.target.value,
-                                    )
+                                    updateTransition(i, "writeSymbol", e.target.value)
                                   }
                                 />
                               </td>
@@ -1141,11 +1105,7 @@ export default function App() {
                                   className="bg-transparent outline-none cursor-pointer font-bold px-1"
                                   value={t.move}
                                   onChange={(e) =>
-                                    updateTransition(
-                                      i,
-                                      "move",
-                                      e.target.value as any,
-                                    )
+                                    updateTransition(i, "move", e.target.value as any)
                                   }
                                 >
                                   <option value="L">L</option>
@@ -1159,11 +1119,7 @@ export default function App() {
                                   className="w-20 bg-transparent outline-none focus:bg-white focus:ring-1 focus:ring-black font-medium text-slate-600"
                                   value={t.nextState}
                                   onChange={(e) =>
-                                    updateTransition(
-                                      i,
-                                      "nextState",
-                                      e.target.value,
-                                    )
+                                    updateTransition(i, "nextState", e.target.value)
                                   }
                                 />
                               </td>
@@ -1187,22 +1143,16 @@ export default function App() {
                       {selectedExampleId && (
                         <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
                           <div className="flex items-start gap-2">
-                            <BookOpen
-                              size={16}
-                              className="text-blue-600 mt-0.5 shrink-0"
-                            />
+                            <BookOpen size={16} className="text-blue-600 mt-0.5 shrink-0" />
                             <div className="space-y-2">
                               <p className="text-sm font-bold text-blue-900">
-                                Ejercicio activo:{" "}
-                                {EXAMPLES[selectedExampleId]?.title}
+                                Ejercicio activo: {EXAMPLES[selectedExampleId]?.title}
                               </p>
                               <p className="text-[11px] text-blue-700 leading-relaxed">
-                                <strong>✨ Entrada libre:</strong> Puedes
-                                escribir cualquier cadena que desues
-                                experimentar. Los cambios se aplican
-                                automáticamente. Si usas símbolos no definidos
-                                en las reglas, simplemente la máquina se
-                                detendrá cuando los encuentre.
+                                <strong>✨ Entrada libre:</strong> Puedes escribir cualquier
+                                cadena que desues experimentar. Los cambios se aplican
+                                automáticamente. Si usas símbolos no definidos en las reglas,
+                                simplemente la máquina se detendrá cuando los encuentre.
                               </p>
                             </div>
                           </div>
@@ -1211,20 +1161,17 @@ export default function App() {
 
                       <div className="p-4 rounded-lg bg-green-50 border border-green-200">
                         <div className="flex items-start gap-2">
-                          <Sparkles
-                            size={16}
-                            className="text-green-600 mt-0.5 shrink-0"
-                          />
+                          <Sparkles size={16} className="text-green-600 mt-0.5 shrink-0" />
                           <div className="space-y-1">
                             <p className="text-[11px] text-green-800 leading-relaxed">
                               Los cambios en la configuración se aplican{" "}
-                              <strong>automáticamente</strong> cuando la máquina
-                              está en estado inicial (sin pasos ejecutados).
+                              <strong>automáticamente</strong> cuando la máquina está en
+                              estado inicial (sin pasos ejecutados).
                             </p>
                             <p className="text-[10px] text-green-700 leading-relaxed">
-                              💡 <strong>Tip:</strong> Experimenta libremente
-                              con cualquier entrada. El simulador te dirá si no
-                              hay reglas definidas para ciertos símbolos.
+                              💡 <strong>Tip:</strong> Experimenta libremente con cualquier
+                              entrada. El simulador te dirá si no hay reglas definidas para
+                              ciertos símbolos.
                             </p>
                           </div>
                         </div>
@@ -1233,10 +1180,7 @@ export default function App() {
                       {/* Toggle de Modo Dinámico */}
                       <div className="p-4 rounded-lg bg-purple-50 border border-purple-200">
                         <div className="flex items-start gap-3">
-                          <Sparkles
-                            size={16}
-                            className="text-purple-600 mt-0.5 shrink-0"
-                          />
+                          <Sparkles size={16} className="text-purple-600 mt-0.5 shrink-0" />
                           <div className="flex-1 space-y-2">
                             <div className="flex items-center justify-between">
                               <div>
@@ -1244,10 +1188,9 @@ export default function App() {
                                   🎨 Modo Transiciones Dinámicas
                                 </p>
                                 <p className="text-[10px] text-purple-700 leading-relaxed mt-1">
-                                  Genera automáticamente las reglas de
-                                  transición basadas en los símbolos de tu
-                                  entrada. Perfecto para verificar palíndromos
-                                  con cualquier palabra.
+                                  Genera automáticamente las reglas de transición basadas en
+                                  los símbolos de tu entrada. Perfecto para verificar
+                                  palíndromos con cualquier palabra.
                                 </p>
                               </div>
                               <button
@@ -1260,9 +1203,7 @@ export default function App() {
                                 <span
                                   className={cn(
                                     "absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-200",
-                                    dynamicMode
-                                      ? "translate-x-7"
-                                      : "translate-x-0",
+                                    dynamicMode ? "translate-x-7" : "translate-x-0",
                                   )}
                                 />
                               </button>
@@ -1270,15 +1211,14 @@ export default function App() {
                             {dynamicMode && (
                               <div className="p-2 bg-purple-100 rounded-lg border border-purple-300">
                                 <p className="text-[10px] text-purple-800 leading-relaxed">
-                                  ✅ <strong>Activo:</strong> Las transiciones
-                                  se generarán automáticamente para verificar si
-                                  tu entrada es un palíndromo. Cambia la cinta y
-                                  las reglas se actualizarán.
+                                  ✅ <strong>Activo:</strong> Las transiciones se generarán
+                                  automáticamente para verificar si tu entrada es un
+                                  palíndromo. Cambia la cinta y las reglas se actualizarán.
                                   <br />
                                   <span className="text-[9px] text-purple-600">
                                     Transiciones actuales:{" "}
-                                    <strong>{config.transitions.length}</strong>{" "}
-                                    reglas generadas
+                                    <strong>{config.transitions.length}</strong> reglas
+                                    generadas
                                   </span>
                                 </p>
                               </div>
@@ -1300,9 +1240,7 @@ export default function App() {
                               tape: e.target.value.split(""),
                             }))
                           }
-                          placeholder={getPlaceholderForExample(
-                            selectedExampleId,
-                          )}
+                          placeholder={getPlaceholderForExample(selectedExampleId)}
                         />
                         {selectedExampleId &&
                           (() => {
@@ -1313,10 +1251,7 @@ export default function App() {
                             if (validation.warning) {
                               return (
                                 <div className="p-3 rounded-lg bg-yellow-50 border border-yellow-200 flex items-start gap-2">
-                                  <Info
-                                    size={14}
-                                    className="text-yellow-600 mt-0.5 shrink-0"
-                                  />
+                                  <Info size={14} className="text-yellow-600 mt-0.5 shrink-0" />
                                   <p className="text-[10px] text-yellow-800 leading-relaxed">
                                     {validation.warning}
                                   </p>
@@ -1337,26 +1272,23 @@ export default function App() {
                               Pruebas Rápidas
                             </label>
                             <div className="flex flex-wrap gap-2">
-                              {getQuickExamples(selectedExampleId).map(
-                                (example, idx) => (
-                                  <button
-                                    key={idx}
-                                    onClick={() => {
-                                      setConfig((prev) => ({
-                                        ...prev,
-                                        tape: example.split(""),
-                                      }));
-                                    }}
-                                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg font-mono text-xs transition-all"
-                                  >
-                                    {example}
-                                  </button>
-                                ),
-                              )}
+                              {getQuickExamples(selectedExampleId).map((example, idx) => (
+                                <button
+                                  key={idx}
+                                  onClick={() => {
+                                    setConfig((prev) => ({
+                                      ...prev,
+                                      tape: example.split(""),
+                                    }));
+                                  }}
+                                  className="px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg font-mono text-xs transition-all"
+                                >
+                                  {example}
+                                </button>
+                              ))}
                             </div>
                             <p className="text-[10px] text-slate-500 leading-relaxed">
-                              Haz clic en un ejemplo para cargarlo
-                              automáticamente
+                              Haz clic en un ejemplo para cargarlo automáticamente
                             </p>
                           </div>
                         )}
@@ -1381,15 +1313,11 @@ export default function App() {
                       {(state.stepCount > 0 || state.isRunning) && (
                         <div className="p-4 rounded-lg bg-amber-50 border border-amber-200">
                           <div className="flex items-start gap-2">
-                            <Info
-                              size={16}
-                              className="text-amber-600 mt-0.5 shrink-0"
-                            />
+                            <Info size={16} className="text-amber-600 mt-0.5 shrink-0" />
                             <div className="space-y-2">
                               <p className="text-[11px] text-amber-800 leading-relaxed">
-                                La máquina está en ejecución o ya ha ejecutado
-                                pasos. Para aplicar los cambios de
-                                configuración, debes reiniciarla.
+                                La máquina está en ejecución o ya ha ejecutado pasos. Para
+                                aplicar los cambios de configuración, debes reiniciarla.
                               </p>
                               <button
                                 onClick={reset}
@@ -1406,7 +1334,6 @@ export default function App() {
                 </div>
               </section>
             </div>
-            {/* End Left Column */}
 
             {/* Right Column: State Graph */}
             <div className="lg:w-150 xl:w-175">
@@ -1433,9 +1360,7 @@ export default function App() {
                 </div>
               </section>
             </div>
-            {/* End Right Column */}
           </div>
-          {/* End Two Column Layout */}
         </div>
       </main>
 
