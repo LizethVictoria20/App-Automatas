@@ -22,6 +22,9 @@ import {
   Info,
   Sparkles,
   Network,
+  ArrowLeft,
+  ArrowRight,
+  Minus,
 } from "lucide-react";
 import { TMConfig, TMState, Transition, Symbol } from "./types";
 import { EXAMPLES } from "./examples";
@@ -75,9 +78,11 @@ const Header = () => (
 const TapeComponent = ({
   state,
   blankSymbol,
+  lastMove,
 }: {
   state: TMState;
   blankSymbol: Symbol;
+  lastMove: "L" | "R" | "N" | null;
 }) => {
   const visibleRange = 10;
   const cells = [];
@@ -93,42 +98,101 @@ const TapeComponent = ({
     });
   }
 
-  return (
-    <div className="relative w-full overflow-hidden py-12 bg-[#F8F8F7] border-y border-black/5">
-      <div className="absolute top-0 left-1/2 -ml-px w-px h-full bg-black/10 z-0"></div>
-      <div className="flex justify-center items-center gap-2">
-        <AnimatePresence initial={false}>
-          {cells.map((cell) => (
-            <motion.div
-              key={cell.index}
-              layout
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{
-                opacity: 1,
-                scale: cell.index === state.headIndex ? 1.1 : 1,
-                x: (cell.index - state.headIndex) * 64,
-                zIndex: cell.index === state.headIndex ? 20 : 10,
-              }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ type: "spring", duration: 0.5, bounce: 0.3 }}
-              className={cn(
-                "absolute w-14 h-14 flex items-center justify-center border font-mono text-lg transition-colors",
-                cell.index === state.headIndex
-                  ? "bg-black text-white border-black shadow-xl"
-                  : "bg-white text-black border-black/10",
-              )}
-            >
-              {cell.value}
-              {cell.index === state.headIndex && (
-                <div className="absolute -top-8 text-[10px] font-bold text-black uppercase tracking-tighter">
-                  Cabezal
-                </div>
-              )}
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
+  const getMoveText = () => {
+    if (!lastMove || state.stepCount === 0) return null;
+    switch (lastMove) {
+      case "L":
+        return {
+          text: "IZQUIERDA",
+          icon: ArrowLeft,
+          color: "text-blue-700",
+          bg: "bg-blue-50",
+          border: "border-blue-300",
+          shadowColor: "shadow-blue-200/50",
+        };
+      case "R":
+        return {
+          text: "DERECHA",
+          icon: ArrowRight,
+          color: "text-green-700",
+          bg: "bg-green-50",
+          border: "border-green-300",
+          shadowColor: "shadow-green-200/50",
+        };
+      case "N":
+        return {
+          text: "SIN MOVIMIENTO",
+          icon: Minus,
+          color: "text-gray-700",
+          bg: "bg-gray-50",
+          border: "border-gray-300",
+          shadowColor: "shadow-gray-200/50",
+        };
+      default:
+        return null;
+    }
+  };
 
+  const moveInfo = getMoveText();
+
+  return (
+    <div className="w-full flex flex-col items-center">
+      {/* Movement Direction Indicator */}
+      {moveInfo && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8, y: -10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.8 }}
+          transition={{ type: "spring", duration: 0.4, bounce: 0.3 }}
+          className={cn(
+            "mb-4 mt-2 px-4 py-2 rounded-lg border-2 shadow-lg font-bold text-xs tracking-wider flex items-center gap-2",
+            moveInfo.bg,
+            moveInfo.border,
+            moveInfo.color,
+            moveInfo.shadowColor,
+          )}
+          style={{ position: "static" }}
+        >
+          <moveInfo.icon size={16} strokeWidth={3} />
+          <span>{moveInfo.text}</span>
+          <moveInfo.icon size={16} strokeWidth={3} />
+        </motion.div>
+      )}
+      <div className="relative w-full overflow-hidden py-12 bg-[#F8F8F7] border-y border-black/5">
+        <div className="absolute top-0 left-1/2 -ml-px w-px h-full bg-black/10 z-0"></div>
+        <div className="flex justify-center items-center gap-2">
+          <AnimatePresence initial={false}>
+            {cells.map((cell) => (
+              <motion.div
+                key={cell.index}
+                layout
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{
+                  opacity: 1,
+                  scale: cell.index === state.headIndex ? 1.1 : 1,
+                  x: (cell.index - state.headIndex) * 64,
+                  zIndex: cell.index === state.headIndex ? 20 : 10,
+                }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ type: "spring", duration: 0.5, bounce: 0.3 }}
+                className={cn(
+                  "absolute w-14 h-14 flex items-center justify-center border font-mono text-lg transition-colors",
+                  cell.index === state.headIndex
+                    ? "bg-black text-white border-black shadow-xl"
+                    : "bg-white text-black border-black/10",
+                )}
+              >
+                {cell.value}
+                {cell.index === state.headIndex && (
+                  <div className="absolute -top-8 text-[10px] font-bold text-black uppercase tracking-tighter">
+                    Cabezal
+                  </div>
+                )}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      </div>
       {/* Pointer UI */}
       <div className="absolute bottom-4 left-1/2 -ml-3 z-30">
         <div className="w-0 h-0 bg-white  border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-10 border-b-pink"></div>
@@ -497,6 +561,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<"rules" | "config">("rules");
   const [selectedExampleId, setSelectedExampleId] = useState<string>("");
   const [dynamicMode, setDynamicMode] = useState(false); // Modo de transiciones dinámicas
+  const [lastMove, setLastMove] = useState<"L" | "R" | "N" | null>(null); // Última dirección de movimiento
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -537,6 +602,7 @@ export default function App() {
       isHalted: false,
     });
     setExplanation("");
+    setLastMove(null); // Limpiar el indicador de dirección
   }, [config]);
 
   const exportLog = () => {
@@ -613,6 +679,7 @@ export default function App() {
     };
 
     setState(nextStateData);
+    setLastMove(rule.move); // Guardar la dirección del último movimiento
 
     if (nextStateData.isHalted) {
       if (nextStateData.currentState === "accept") {
@@ -901,7 +968,11 @@ export default function App() {
             <div className="flex-1 flex flex-col gap-8">
               {/* Tape Visualization */}
               <section className="bg-white rounded-xl border border-black/5 shadow-md overflow-hidden relative">
-                <TapeComponent state={state} blankSymbol={config.blankSymbol} />
+                <TapeComponent
+                  state={state}
+                  blankSymbol={config.blankSymbol}
+                  lastMove={lastMove}
+                />
 
                 {/* Controls Bar */}
                 <div className="px-8 py-6 flex items-center justify-between bg-white border-t border-black/5">
@@ -1127,7 +1198,7 @@ export default function App() {
                               </p>
                               <p className="text-[11px] text-blue-700 leading-relaxed">
                                 <strong>✨ Entrada libre:</strong> Puedes
-                                escribir cualquier cadena que desees
+                                escribir cualquier cadena que desues
                                 experimentar. Los cambios se aplican
                                 automáticamente. Si usas símbolos no definidos
                                 en las reglas, simplemente la máquina se
