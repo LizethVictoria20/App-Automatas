@@ -1,1443 +1,669 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import { useState, useEffect, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import {
-  Play,
-  Pause,
-  SkipForward,
-  RotateCcw,
-  Cpu,
-  BookOpen,
-  Plus,
-  Trash2,
-  Info,
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { EXERCISES } from './data/exercises';
+import { initializeState, stepMachine, getAlphabetFromTape } from './utils/turingInterpreter';
+import { RuntimeState, StepHistory, TransitionRule } from './types';
+import { TapeVisualizer } from './components/TapeVisualizer';
+import { ControlPanel } from './components/ControlPanel';
+import { StateGraph } from './components/StateGraph';
+import { RulesTable } from './components/RulesTable';
+import { HelpSection } from './components/HelpSection';
+import { 
+  Play, 
+  RotateCcw, 
+  Cpu, 
+  ClipboardList, 
+  HelpCircle, 
+  History, 
+  Sparkle,
+  Scale,
+  BrainCircuit,
+  Heart,
   Sparkles,
-  Network,
-  ArrowLeft,
-  ArrowRight,
-  Minus,
-} from "lucide-react";
-import { TMConfig, TMState, Transition, Symbol } from "./types";
-import { EXAMPLES } from "./examples";
-import { cn } from "./lib/utils";
-import confetti from "canvas-confetti";
-import StateGraph from "./components/StateGraph";
-
-// --- Components ---
-
-const Header = () => (
-  <header className="sticky top-0 z-40 border-b border-black/10 bg-white/75 backdrop-blur">
-    <div className="px-6 sm:px-8 py-5 flex justify-between items-center">
-      <div className="flex items-center gap-4 min-w-0">
-        <div className="relative">
-          <div className="absolute -inset-1 rounded-xl bg-linear-to-br from-black/10 via-black/5 to-transparent blur"></div>
-          <div className="relative w-11 h-11 rounded-xl bg-black text-white flex items-center justify-center shadow-sm">
-            <Cpu size={22} />
-          </div>
-        </div>
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <h1 className="font-sans font-semibold tracking-tight text-lg sm:text-xl truncate">
-              Máquina de Turing
-            </h1>
-            <span className="hidden sm:inline-flex text-[10px] font-mono uppercase tracking-widest px-2 py-1 rounded-full border border-black/10 bg-white">
-              Simulador
-            </span>
-          </div>
-          <p className="text-[11px] text-black/50 leading-snug">
-            Autómatas • Cinta • Transiciones • Ejercicios
-          </p>
-        </div>
-      </div>
-      <div className="flex items-center gap-3">
-        <div className="flex -space-x-2">
-          <div className="w-9 h-9 rounded-full border-2 border-white bg-linear-to-br from-blue-200 to-blue-50 flex items-center justify-center text-[10px] font-bold text-blue-900 shadow-sm">
-            LV
-          </div>
-          <div className="w-9 h-9 rounded-full border-2 border-white bg-linear-to-br from-emerald-200 to-emerald-50 flex items-center justify-center text-[10px] font-bold text-emerald-900 shadow-sm">
-            MM
-          </div>
-        </div>
-      </div>
-    </div>
-  </header>
-);
-
-const TapeComponent = ({
-  state,
-  blankSymbol,
-  lastMove,
-  readIndices,
-}: {
-  state: TMState;
-  blankSymbol: Symbol;
-  lastMove: "L" | "R" | "N" | null;
-  readIndices: Set<number>;
-}) => {
-  const visibleRange = 10;
-  const cells = [];
-
-  for (
-    let i = state.headIndex - visibleRange;
-    i <= state.headIndex + visibleRange;
-    i++
-  ) {
-    cells.push({
-      index: i,
-      value: state.tape[i] !== undefined ? state.tape[i] : blankSymbol,
-    });
-  }
-
-  const getMoveText = () => {
-    if (!lastMove || state.stepCount === 0) return null;
-    switch (lastMove) {
-      case "L":
-        return {
-          text: "IZQUIERDA",
-          icon: ArrowLeft,
-          color: "text-blue-700",
-          bg: "bg-blue-50",
-          border: "border-blue-300",
-          shadowColor: "shadow-blue-200/50",
-        };
-      case "R":
-        return {
-          text: "DERECHA",
-          icon: ArrowRight,
-          color: "text-green-700",
-          bg: "bg-green-50",
-          border: "border-green-300",
-          shadowColor: "shadow-green-200/50",
-        };
-      case "N":
-        return {
-          text: "SIN MOVIMIENTO",
-          icon: Minus,
-          color: "text-gray-700",
-          bg: "bg-gray-50",
-          border: "border-gray-300",
-          shadowColor: "shadow-gray-200/50",
-        };
-      default:
-        return null;
-    }
-  };
-
-  const moveInfo = getMoveText();
-
-  return (
-    <div className="w-full flex flex-col items-center">
-      {moveInfo && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8, y: -10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.8 }}
-          transition={{ type: "spring", duration: 0.4, bounce: 0.3 }}
-          className={cn(
-            "mb-4 mt-2 px-4 py-2 rounded-lg border-2 shadow-lg font-bold text-xs tracking-wider flex items-center gap-2",
-            moveInfo.bg,
-            moveInfo.border,
-            moveInfo.color,
-            moveInfo.shadowColor,
-          )}
-          style={{ position: "static" }}
-        >
-          <moveInfo.icon size={16} strokeWidth={3} />
-          <span>{moveInfo.text}</span>
-          <moveInfo.icon size={16} strokeWidth={3} />
-        </motion.div>
-      )}
-      <div className="relative w-full overflow-hidden py-12 bg-[#F8F8F7] border-y border-black/5">
-        <div className="absolute top-0 left-1/2 -ml-px w-px h-full bg-black/10 z-0"></div>
-        <div className="flex justify-center items-center gap-2">
-          <AnimatePresence initial={false}>
-            {cells.map((cell) => {
-              const isHead = cell.index === state.headIndex;
-              const wasRead = readIndices.has(cell.index) && !isHead;
-              return (
-                <motion.div
-                  key={cell.index}
-                  layout
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{
-                    opacity: 1,
-                    scale: isHead ? 1.1 : 1,
-                    x: (cell.index - state.headIndex) * 64,
-                    zIndex: isHead ? 20 : 10,
-                  }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ type: "spring", duration: 0.5, bounce: 0.3 }}
-                  className={cn(
-                    "absolute w-14 h-14 flex items-center justify-center border font-mono text-lg transition-colors",
-                    isHead
-                      ? "bg-black text-white border-black shadow-xl"
-                      : wasRead
-                        ? "bg-amber-100 text-amber-900 border-amber-400 shadow-md"
-                        : "bg-white text-black border-black/10",
-                  )}
-                >
-                  {cell.value}
-                  {isHead && (
-                    <div className="absolute -top-8 text-[10px] font-bold text-black uppercase tracking-tighter">
-                      Cabezal
-                    </div>
-                  )}
-                  {wasRead && (
-                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-amber-400 border border-amber-600" />
-                  )}
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
-        </div>
-      </div>
-      <div className="flex items-center gap-4 mt-3 text-[10px] font-mono text-black/40 uppercase tracking-wider">
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-sm bg-black inline-block" />
-          Cabezal actual
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-sm bg-amber-100 border border-amber-400 inline-block" />
-          Ya leída
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-sm bg-white border border-black/10 inline-block" />
-          Sin leer
-        </span>
-      </div>
-    </div>
-  );
-};
-
-// Helper functions
-const getPlaceholderForExample = (exampleId: string): string => {
-  const placeholders: Record<string, string> = {
-    repeat01: "01",
-    binaryIncrement: "1011",
-    divisibleBy3Binary: "110",
-    copyOnes: "1101",
-    divisibleBy3Base10: "123",
-    threeEqualLength: "aabbcc",
-    equalStrings: "abc#abc",
-    palindrome: "abba",
-    palindromeGeneral: "reconocer",
-    busyBeaver3: "_",
-    busyBeaver4: "_",
-    powersOfTwo: "11111111",
-    multipliedLengths: "bbcccaaaaaa",
-    binaryAddition: "101+11",
-    unaryAddition: "111+11",
-    unaryMultiplication: "111*11",
-    binaryMultiplication: "11*10",
-  };
-  return placeholders[exampleId] || "Escribe tu entrada aquí";
-};
-
-const getHelpTextForExample = (exampleId: string): string => {
-  const helpTexts: Record<string, string> = {
-    repeat01: "Escribe un patrón para duplicar (ej: '01', '10', '001')",
-    binaryIncrement: "Escribe un número binario (ej: '1011', '11111', '100')",
-    divisibleBy3Binary:
-      "Escribe un número binario para verificar si es divisible por 3",
-    copyOnes: "Escribe una secuencia con 0s y 1s (ej: '1101', '0110')",
-    divisibleBy3Base10: "Escribe un número decimal (ej: '123', '456', '999')",
-    threeEqualLength:
-      "Escribe igual cantidad de 'a', 'b' y 'c' (ej: 'aabbcc', 'aaabbbccc')",
-    equalStrings:
-      "Escribe dos cadenas iguales separadas por '#' (ej: 'abc#abc', 'hola#hola')",
-    palindrome:
-      "⚠️ Solo acepta símbolos 'a' y 'b' (ej: 'abba', 'aba', 'bab', 'aa')",
-    palindromeGeneral:
-      "✨ Acepta cualquier palabra con letras a-z (ej: 'reconocer', 'anilina', 'oso', 'radar', 'neuquen')",
-    busyBeaver3: "Deja la cinta vacía (_) para ver el Busy Beaver en acción",
-    busyBeaver4: "Deja la cinta vacía (_) para ver el Busy Beaver en acción",
-    powersOfTwo:
-      "Escribe una secuencia de 1s (ej: '11111111' para 8, '1111' para 4)",
-    multipliedLengths:
-      "Formato: 'm' b's + 'n' c's + 'm×n' a's (ej: 'bbcccaaaaaa' = 2×3=6)",
-    binaryAddition: "Formato: número1+número2 (ej: '101+11', '1010+101')",
-    unaryAddition: "Formato: 1s+1s (ej: '111+11' = 3+2, '1111+111' = 4+3)",
-    unaryMultiplication:
-      "Formato: 1s*1s (ej: '111*11' = 3×2, '1111*111' = 4×3)",
-    binaryMultiplication:
-      "Formato: binario*binario (ej: '11*10' = 3×2, '101*11' = 5×3)",
-  };
-  return helpTexts[exampleId] || "Escribe la entrada que deseas probar";
-};
-
-const getValidSymbols = (exampleId: string): string[] => {
-  const validSymbols: Record<string, string[]> = {
-    binaryIncrement: ["0", "1"],
-    palindrome: ["a", "b"],
-    palindromeGeneral: "abcdefghijklmnopqrstuvwxyz".split(""),
-    copyOnes: ["0", "1"],
-    repeat01: ["0", "1"],
-    divisibleBy3Binary: ["0", "1"],
-    divisibleBy3Base10: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
-    threeEqualLength: ["a", "b", "c"],
-    equalStrings: [
-      "a",
-      "b",
-      "c",
-      "d",
-      "e",
-      "f",
-      "g",
-      "h",
-      "i",
-      "j",
-      "k",
-      "l",
-      "m",
-      "n",
-      "o",
-      "p",
-      "q",
-      "r",
-      "s",
-      "t",
-      "u",
-      "v",
-      "w",
-      "x",
-      "y",
-      "z",
-      "0",
-      "1",
-      "2",
-      "3",
-      "4",
-      "5",
-      "6",
-      "7",
-      "8",
-      "9",
-      "#",
-    ],
-    busyBeaver3: ["_", " "],
-    busyBeaver4: ["_", " "],
-    powersOfTwo: ["1"],
-    multipliedLengths: ["a", "b", "c"],
-    binaryAddition: ["0", "1", "+"],
-    unaryAddition: ["1", "+"],
-    unaryMultiplication: ["1", "*"],
-    binaryMultiplication: ["0", "1", "*"],
-  };
-  return validSymbols[exampleId] || [];
-};
-
-const validateInput = (
-  input: string,
-  exampleId: string,
-): { valid: boolean; message?: string; warning?: string } => {
-  if (!exampleId) return { valid: true };
-  const validSymbols = getValidSymbols(exampleId);
-  if (validSymbols.length === 0) return { valid: true };
-  const invalidChars = input
-    .split("")
-    .filter((char) => !validSymbols.includes(char));
-  if (invalidChars.length > 0) {
-    const uniqueInvalid = [...new Set(invalidChars)].join(", ");
-    return {
-      valid: true,
-      warning: `⚠️ Nota: La entrada contiene símbolos "${uniqueInvalid}" que podrían no tener transiciones definidas. Este ejercicio fue diseñado para: ${validSymbols.join(", ")}`,
-    };
-  }
-  return { valid: true };
-};
-
-const getQuickExamples = (exampleId: string): string[] => {
-  const examples: Record<string, string[]> = {
-    repeat01: ["01", "10", "001", "11"],
-    binaryIncrement: ["1011", "1111", "100", "1", "10101"],
-    divisibleBy3Binary: ["11", "110", "1001", "1100"],
-    copyOnes: ["1101", "0110", "1111", "10101"],
-    divisibleBy3Base10: ["123", "456", "789", "999", "12"],
-    threeEqualLength: ["abc", "aabbcc", "aaabbbccc"],
-    equalStrings: ["abc#abc", "hola#hola", "test#test", "123#123"],
-    palindrome: ["abba", "aba", "bab", "aa", "bb", "a"],
-    palindromeGeneral: [
-      "reconocer",
-      "anilina",
-      "oso",
-      "radar",
-      "neuquen",
-      "sometemos",
-    ],
-    busyBeaver3: ["_"],
-    busyBeaver4: ["_"],
-    powersOfTwo: ["11", "1111", "11111111", "1111111111111111"],
-    multipliedLengths: ["bca", "bbccaaaa", "bbcccaaaaaa"],
-    binaryAddition: ["101+11", "1010+101", "1111+1", "10+10"],
-    unaryAddition: ["111+11", "1111+111", "11+11", "1+1"],
-    unaryMultiplication: ["111*11", "1111*111", "11*11", "111*1"],
-    binaryMultiplication: ["11*10", "101*11", "10*10", "111*10"],
-  };
-  return examples[exampleId] || [];
-};
-
-const generateDynamicPalindromeTransitions = (
-  inputSymbols: string[],
-): TMConfig["transitions"] => {
-  const uniqueSymbols = [...new Set(inputSymbols.filter((s) => s !== "_"))];
-  if (uniqueSymbols.length === 0) {
-    return [
-      {
-        currentState: "q0",
-        readSymbol: "_",
-        writeSymbol: "_",
-        move: "N",
-        nextState: "accept",
-      },
-    ];
-  }
-  const transitions: TMConfig["transitions"] = [];
-  uniqueSymbols.forEach((symbol) => {
-    transitions.push({
-      currentState: "q0",
-      readSymbol: symbol,
-      writeSymbol: "X",
-      move: "R",
-      nextState: `q_search_${symbol}`,
-    });
-  });
-  transitions.push({
-    currentState: "q0",
-    readSymbol: "_",
-    writeSymbol: "_",
-    move: "N",
-    nextState: "accept",
-  });
-  transitions.push({
-    currentState: "q0",
-    readSymbol: "X",
-    writeSymbol: "X",
-    move: "R",
-    nextState: "q_skip",
-  });
-  uniqueSymbols.forEach((symbol) => {
-    transitions.push({
-      currentState: "q_skip",
-      readSymbol: symbol,
-      writeSymbol: symbol,
-      move: "R",
-      nextState: "q_skip",
-    });
-  });
-  transitions.push({
-    currentState: "q_skip",
-    readSymbol: "X",
-    writeSymbol: "X",
-    move: "R",
-    nextState: "q_skip",
-  });
-  transitions.push({
-    currentState: "q_skip",
-    readSymbol: "_",
-    writeSymbol: "_",
-    move: "N",
-    nextState: "accept",
-  });
-  uniqueSymbols.forEach((symbol) => {
-    const searchState = `q_search_${symbol}`;
-    const returnState = `q_return_${symbol}`;
-    uniqueSymbols.forEach((otherSymbol) => {
-      transitions.push({
-        currentState: searchState,
-        readSymbol: otherSymbol,
-        writeSymbol: otherSymbol,
-        move: "R",
-        nextState: searchState,
-      });
-    });
-    transitions.push({
-      currentState: searchState,
-      readSymbol: "X",
-      writeSymbol: "X",
-      move: "R",
-      nextState: searchState,
-    });
-    transitions.push({
-      currentState: searchState,
-      readSymbol: "_",
-      writeSymbol: "_",
-      move: "L",
-      nextState: returnState,
-    });
-    transitions.push({
-      currentState: returnState,
-      readSymbol: symbol,
-      writeSymbol: "X",
-      move: "L",
-      nextState: "q_back",
-    });
-    uniqueSymbols.forEach((otherSymbol) => {
-      if (otherSymbol !== symbol) {
-        transitions.push({
-          currentState: returnState,
-          readSymbol: otherSymbol,
-          writeSymbol: otherSymbol,
-          move: "N",
-          nextState: "reject",
-        });
-      }
-    });
-    transitions.push({
-      currentState: returnState,
-      readSymbol: "X",
-      writeSymbol: "X",
-      move: "N",
-      nextState: "reject",
-    });
-  });
-  transitions.push({
-    currentState: "q_back",
-    readSymbol: "X",
-    writeSymbol: "X",
-    move: "L",
-    nextState: "q_back",
-  });
-  uniqueSymbols.forEach((symbol) => {
-    transitions.push({
-      currentState: "q_back",
-      readSymbol: symbol,
-      writeSymbol: symbol,
-      move: "L",
-      nextState: "q_back",
-    });
-  });
-  transitions.push({
-    currentState: "q_back",
-    readSymbol: "_",
-    writeSymbol: "_",
-    move: "R",
-    nextState: "q0",
-  });
-  return transitions;
-};
-
-// ─── Estado inicial de la máquina a partir de una config ───────────────────
-const buildInitialMachineState = (cfg: TMConfig): TMState => ({
-  tape: [...cfg.tape],
-  headIndex: 0,
-  currentState: cfg.initialState,
-  isRunning: false,
-  stepCount: 0,
-  isHalted: false,
-});
+  X,
+  Award
+} from 'lucide-react';
 
 export default function App() {
-  // config sólo cambia cuando el usuario selecciona un ejercicio o edita reglas/cinta
-  const [config, setConfig] = useState<TMConfig>(EXAMPLES.binaryIncrement);
-  // machineState es la ejecución en curso — NUNCA se resetea por efectos secundarios
-  const [machineState, setMachineState] = useState<TMState>(
-    buildInitialMachineState(EXAMPLES.binaryIncrement),
+  // Active Exercise Selected Index
+  const [exerciseIndex, setExerciseIndex] = useState(1); // Default to Binary Increment
+  const activeConfig = EXERCISES[exerciseIndex];
+
+  // Turing Machine Runtime state
+  const [runtimeState, setRuntimeState] = useState<RuntimeState>(() => 
+    initializeState(activeConfig)
   );
 
-  const [speed, setSpeed] = useState(500);
-  const [explanation, setExplanation] = useState<string>("");
-  const [isExplaining, setIsExplaining] = useState(false);
-  const [activeTab, setActiveTab] = useState<"rules" | "config">("rules");
-  const [selectedExampleId, setSelectedExampleId] =
-    useState<string>("binaryIncrement");
-  const [dynamicMode, setDynamicMode] = useState(false);
-  const [lastMove, setLastMove] = useState<"L" | "R" | "N" | null>(null);
-  const [readIndices, setReadIndices] = useState<Set<number>>(new Set());
+  // Local overrides/customizations of rules
+  const [localRules, setLocalRules] = useState<TransitionRule[]>(activeConfig.rules);
 
-  // Refs para el loop de ejecución — evita stale closures
-  const machineStateRef = useRef(machineState);
-  const configRef = useRef(config);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const isRunningRef = useRef(false);
+  // History states for the "Step Backward" feature
+  const [history, setHistory] = useState<StepHistory[]>([]);
 
+  // Simulation speed in ms
+  const [speed, setSpeed] = useState(400);
+
+  // Automatic running timer flag
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  // Instant Run-To-End mode
+  const [instantRun, setInstantRun] = useState(false);
+
+  // Terminal log statements
+  const [logs, setLogs] = useState<string[]>([]);
+
+  // Reference for log terminal scrolling
+  const logTerminalRef = useRef<HTMLDivElement>(null);
+
+  // Show / hide the simulation result modal overlay
+  const [showResultModal, setShowResultModal] = useState(false);
+
+  // Synchronize modal state with simulation final results (accepted or rejected)
   useEffect(() => {
-    machineStateRef.current = machineState;
-  }, [machineState]);
-  useEffect(() => {
-    configRef.current = config;
-  }, [config]);
-
-  // ── Modo dinámico: regenerar transiciones solo cuando la cinta cambia y la
-  //    máquina NO está corriendo y no ha ejecutado pasos ──────────────────────
-  useEffect(() => {
-    if (!dynamicMode) return;
-    if (machineState.isRunning || machineState.stepCount > 0) return;
-    const newTransitions = generateDynamicPalindromeTransitions(config.tape);
-    setConfig((prev) => ({ ...prev, transitions: newTransitions }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config.tape, dynamicMode]);
-
-  // ── Reset explícito ────────────────────────────────────────────────────────
-  const reset = useCallback((cfg?: TMConfig) => {
-    const targetConfig = cfg ?? configRef.current;
-    if (timerRef.current) clearInterval(timerRef.current);
-    isRunningRef.current = false;
-    const fresh = buildInitialMachineState(targetConfig);
-    setMachineState(fresh);
-    machineStateRef.current = fresh;
-    setExplanation("");
-    setLastMove(null);
-    setReadIndices(new Set());
-  }, []);
-
-  // ── Un paso de la máquina — usa refs para no quedar desactualizado ─────────
-  const stepOnce = useCallback(() => {
-    const st = machineStateRef.current;
-    const cfg = configRef.current;
-
-    if (st.isHalted) return;
-
-    const currentSymbol =
-      st.tape[st.headIndex] !== undefined
-        ? st.tape[st.headIndex]
-        : cfg.blankSymbol;
-
-    const rule = cfg.transitions.find(
-      (t) =>
-        t.currentState === st.currentState && t.readSymbol === currentSymbol,
-    );
-
-    if (!rule) {
-      // Sin regla → detener
-      const halted: TMState = { ...st, isHalted: true, isRunning: false };
-      setMachineState(halted);
-      machineStateRef.current = halted;
-      isRunningRef.current = false;
-      if (timerRef.current) clearInterval(timerRef.current);
-
-      getExplanation(
-        st.currentState,
-        st.tape,
-        st.headIndex,
-        {
-          currentState: st.currentState,
-          readSymbol: currentSymbol,
-          writeSymbol: currentSymbol,
-          move: "N",
-          nextState: st.currentState,
-        },
-        st.currentState,
-        true,
-      );
-      if (st.currentState === "accept")
-        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-      return;
-    }
-
-    // Aplicar transición
-    const newTape = [...st.tape];
-    newTape[st.headIndex] = rule.writeSymbol;
-
-    let newHead = st.headIndex;
-    if (rule.move === "L") newHead--;
-    if (rule.move === "R") newHead++;
-
-    if (newHead < 0) {
-      newTape.unshift(cfg.blankSymbol);
-      newHead = 0;
-      // Ajustar readIndices: todos los índices se desplazan +1
-      setReadIndices((prev) => {
-        const shifted = new Set<number>();
-        prev.forEach((idx) => shifted.add(idx + 1));
-        shifted.add(1); // la celda que acabamos de leer (era índice 0, ahora es 1)
-        return shifted;
-      });
+    if (['accepted', 'rejected'].includes(runtimeState.status)) {
+      setShowResultModal(true);
     } else {
-      setReadIndices((prev) => new Set(prev).add(st.headIndex));
+      setShowResultModal(false);
     }
+  }, [runtimeState.status]);
 
-    if (newHead >= newTape.length) newTape.push(cfg.blankSymbol);
-
-    const isHalted =
-      rule.nextState === "halt" ||
-      rule.nextState === "accept" ||
-      rule.nextState === "reject";
-
-    const next: TMState = {
-      tape: newTape,
-      headIndex: newHead,
-      currentState: rule.nextState,
-      isRunning: !isHalted && st.isRunning,
-      stepCount: st.stepCount + 1,
-      isHalted,
-    };
-
-    setMachineState(next);
-    machineStateRef.current = next;
-    setLastMove(rule.move);
-
-    if (isHalted) {
-      isRunningRef.current = false;
-      if (timerRef.current) clearInterval(timerRef.current);
-      if (next.currentState === "accept")
-        confetti({ particleCount: 150, spread: 100 });
-      getExplanation(
-        st.currentState,
-        st.tape,
-        st.headIndex,
-        rule,
-        next.currentState,
-        true,
-      );
-    } else if (Math.random() > 0.85) {
-      getExplanation(
-        st.currentState,
-        st.tape,
-        st.headIndex,
-        rule,
-        next.currentState,
-      );
+  // Sync state if exercise config changes
+  useEffect(() => {
+    const freshState = initializeState(activeConfig);
+    setRuntimeState(freshState);
+    setHistory([]);
+    setLogs([`Cargado ejercicio: "${activeConfig.name}". Máquina de Turing inicializada.`]);
+    
+    // Handle dynamic rule rendering for adaptative palidromes
+    if (activeConfig.generateRulesForAlphabet) {
+      const currentAlphabet = getAlphabetFromTape(freshState.tape, activeConfig.blankSymbol);
+      setLocalRules(activeConfig.generateRulesForAlphabet(currentAlphabet, activeConfig.blankSymbol));
+    } else {
+      setLocalRules(activeConfig.rules);
     }
-  }, []); // Sin dependencias — usa solo refs
+  }, [exerciseIndex, activeConfig]);
 
-  // ── Timer de ejecución automática ─────────────────────────────────────────
-  const startTimer = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => {
-      if (!isRunningRef.current || machineStateRef.current.isHalted) {
-        clearInterval(timerRef.current!);
-        return;
+  // Append new statements to our visible logger console
+  const appendLog = useCallback((msg: string) => {
+    setLogs((prev) => [...prev, msg]);
+    // Auto scroll to bottom of logs shell
+    setTimeout(() => {
+      if (logTerminalRef.current) {
+        logTerminalRef.current.scrollTop = logTerminalRef.current.scrollHeight;
       }
-      stepOnce();
-    }, speed);
-  }, [speed, stepOnce]);
-
-  const toggleRun = useCallback(() => {
-    if (machineState.isHalted) return;
-    const nowRunning = !isRunningRef.current;
-    isRunningRef.current = nowRunning;
-    setMachineState((prev) => ({ ...prev, isRunning: nowRunning }));
-    machineStateRef.current = {
-      ...machineStateRef.current,
-      isRunning: nowRunning,
-    };
-
-    if (nowRunning) {
-      startTimer();
-    } else {
-      if (timerRef.current) clearInterval(timerRef.current);
-    }
-  }, [machineState.isHalted, startTimer]);
-
-  // Cuando cambia speed y está corriendo, reinicar el timer con nueva velocidad
-  useEffect(() => {
-    if (isRunningRef.current) startTimer();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [speed]);
-
-  // Limpieza al desmontar
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
+    }, 50);
   }, []);
 
-  const getExplanation = async (
-    currState: string,
-    tape: Symbol[],
-    head: number,
-    rule: Transition,
-    nextState: string,
-    isHalt = false,
-  ) => {
-    try {
-      setIsExplaining(true);
-      const res = await fetch("/api/explain", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          state: currState,
-          tape,
-          headIndex: head,
-          currentRule: rule,
-          nextAction: isHalt
-            ? `HALT en estado ${nextState}. No hay más movimientos posibles o se llegó a un estado final.`
-            : `Lee ${tape[head]}, escribe ${rule.writeSymbol}, mueve ${rule.move}, siguiente estado ${nextState}`,
-        }),
-      });
-      const data = await res.json();
-      setExplanation(data.explanation);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsExplaining(false);
-    }
-  };
+  // Action: Step Forward exactly one transition
+  const handleStepForward = useCallback(() => {
+    setRuntimeState((prev) => {
+      // If we are already halted or finished, do not advance
+      if (['accepted', 'rejected', 'halted', 'error'].includes(prev.status)) {
+        setIsPlaying(false);
+        return prev;
+      }
 
-  const updateTransition = (
-    index: number,
-    field: keyof Transition,
-    value: string,
-  ) => {
-    const newTransitions = [...config.transitions];
-    newTransitions[index] = { ...newTransitions[index], [field]: value };
-    setConfig((prev) => ({ ...prev, transitions: newTransitions }));
-  };
-
-  const addTransition = () => {
-    setConfig((prev) => ({
-      ...prev,
-      transitions: [
-        ...prev.transitions,
-        {
-          currentState: "q0",
-          readSymbol: "0",
-          writeSymbol: "1",
-          move: "R",
-          nextState: "q0",
-        },
-      ],
-    }));
-  };
-
-  const removeTransition = (index: number) => {
-    setConfig((prev) => ({
-      ...prev,
-      transitions: prev.transitions.filter((_, i) => i !== index),
-    }));
-  };
-
-  const handleExampleChange = (exampleId: string) => {
-    if (!exampleId || !EXAMPLES[exampleId]) {
-      setSelectedExampleId("");
-      return;
-    }
-    setSelectedExampleId(exampleId);
-    const example = EXAMPLES[exampleId];
-    const isDynamic = exampleId === "palindromeGeneral";
-    setDynamicMode(isDynamic);
-
-    let finalConfig = example;
-    if (isDynamic) {
-      finalConfig = {
-        ...example,
-        transitions: generateDynamicPalindromeTransitions(example.tape),
+      // Add actual configuration to compute step with custom and generated rules
+      const stepConfig = {
+        ...activeConfig,
+        rules: localRules
       };
+
+      const next = stepMachine(prev, stepConfig);
+
+      // Save previous state to history
+      setHistory((prevHist) => [
+        ...prevHist,
+        {
+          tape: { ...prev.tape },
+          headPosition: prev.headPosition,
+          currentState: prev.currentState,
+          stepCount: prev.stepCount,
+          status: prev.status,
+          lastRuleId: prev.lastRuleId,
+          lastDirection: prev.lastDirection,
+        },
+      ]);
+
+      const currentSymbol = prev.tape[prev.headPosition] ?? activeConfig.blankSymbol;
+      const matchedRule = localRules.find(
+        (r) => r.fromState === prev.currentState && r.readSymbol === currentSymbol
+      );
+
+      // Build readable translation step log
+      if (matchedRule) {
+        appendLog(
+          `Paso ${next.stepCount}: [${prev.currentState}] lee "${currentSymbol}" ` +
+          `→ escribe "${matchedRule.writeSymbol}", mueve ${
+            matchedRule.direction === 'L' ? 'Izquierda (L)' : matchedRule.direction === 'R' ? 'Derecha (R)' : 'Inmóvil (N)'
+          } → va a [${matchedRule.toState}]`
+        );
+      } else {
+        if (next.status === 'accepted') {
+          appendLog(`Paso ${next.stepCount}: Aceptado. No más transiciones en el estado final de aceptación [${prev.currentState}].`);
+        } else {
+          appendLog(`Paso ${next.stepCount}: Rechazado. No se encontró ninguna regla para [${prev.currentState}] leyendo "${currentSymbol}".`);
+        }
+      }
+
+      // Automatically halt play if we arrived at accepted/rejected state
+      if (['accepted', 'rejected', 'halted', 'error'].includes(next.status)) {
+        setIsPlaying(false);
+        if (next.status === 'accepted') {
+          appendLog(`★ ENTRADA ACEPTADA CREADA CON ÉXITO: La máquina resolvió en ${next.stepCount} pasos.`);
+        } else if (next.status === 'rejected') {
+          appendLog(`⚠ ENTRADA RECHAZADA: Se detuvo en estado de fallo tras ${next.stepCount} pasos.`);
+        }
+      }
+
+      return next;
+    });
+  }, [activeConfig, localRules, appendLog]);
+
+  // Action: Step Backward (Restore previous tape layouts from history)
+  const handleStepBackward = useCallback(() => {
+    if (history.length === 0) return;
+
+    const previousHistoryItem = history[history.length - 1];
+    setHistory((prevHist) => prevHist.slice(0, -1));
+
+    setRuntimeState({
+      tape: previousHistoryItem.tape,
+      headPosition: previousHistoryItem.headPosition,
+      currentState: previousHistoryItem.currentState,
+      stepCount: previousHistoryItem.stepCount,
+      status: previousHistoryItem.status,
+      lastRuleId: previousHistoryItem.lastRuleId,
+      lastDirection: previousHistoryItem.lastDirection,
+    });
+
+    appendLog(`↩ Deshacer: Volviendo al Paso ${previousHistoryItem.stepCount} (Estado [${previousHistoryItem.currentState}])`);
+    setIsPlaying(false);
+  }, [history, appendLog]);
+
+  // Action: Reset entire machine to original parameters
+  const handleReset = useCallback(() => {
+    setIsPlaying(false);
+    const freshState = initializeState(activeConfig);
+    setRuntimeState(freshState);
+    setHistory([]);
+    setLogs([`Máquina restablecida. Sistema configurado en el estado inicial [${activeConfig.initialState}].`]);
+    
+    if (activeConfig.generateRulesForAlphabet) {
+      const currentAlphabet = getAlphabetFromTape(freshState.tape, activeConfig.blankSymbol);
+      setLocalRules(activeConfig.generateRulesForAlphabet(currentAlphabet, activeConfig.blankSymbol));
+    } else {
+      setLocalRules(activeConfig.rules);
     }
-    setConfig(finalConfig);
-    configRef.current = finalConfig;
-    reset(finalConfig);
+  }, [activeConfig]);
+
+  // Action: Clear all cells on tape to start fresh manually
+  const handleClearTape = useCallback(() => {
+    setIsPlaying(false);
+    setRuntimeState((prev) => ({
+      ...prev,
+      tape: {}, // Clear all keys
+      headPosition: 0,
+      currentState: activeConfig.initialState,
+      status: 'idle',
+      stepCount: 0,
+      lastRuleId: undefined,
+      lastDirection: undefined,
+    }));
+    setHistory([]);
+    setLogs(['Lienzo de cinta vaciado. Listo para ingresar datos manuales.']);
+  }, [activeConfig]);
+
+  // Action: Load custom tape text string
+  const handleCustomInputLoad = useCallback((text: string) => {
+    setIsPlaying(false);
+    const freshState = initializeState(activeConfig, text);
+    setRuntimeState(freshState);
+    setHistory([]);
+    setLogs([`Entrada manual cargada: "${text}". Estado de la máquina inicializado en [${activeConfig.initialState}].`]);
+    
+    if (activeConfig.generateRulesForAlphabet) {
+      const currentAlphabet = getAlphabetFromTape(freshState.tape, activeConfig.blankSymbol);
+      setLocalRules(activeConfig.generateRulesForAlphabet(currentAlphabet, activeConfig.blankSymbol));
+    }
+  }, [activeConfig]);
+
+  // Action: Modify individual cell on tape (Live editing)
+  const handleCellChange = useCallback((index: number, val: string) => {
+    setRuntimeState((prev) => {
+      const nextTape = { ...prev.tape, [index]: val };
+      
+      // If we are on dynamic rules (like general palindrome), any cell change might alter alphabet/transitions
+      if (activeConfig.generateRulesForAlphabet) {
+        const currentAlphabet = getAlphabetFromTape(nextTape, activeConfig.blankSymbol);
+        setLocalRules(activeConfig.generateRulesForAlphabet(currentAlphabet, activeConfig.blankSymbol));
+      }
+      
+      return {
+        ...prev,
+        tape: nextTape,
+      };
+    });
+    appendLog(`Celda modificada en índice [${index}] con valor "${val}".`);
+  }, [activeConfig, appendLog]);
+
+  // Action: Manage custom rule override lists
+  const handleAddCustomRule = useCallback((newRule: Omit<TransitionRule, 'id'>) => {
+    const formatted: TransitionRule = {
+      ...newRule,
+      id: `custom-rule-${Date.now()}`
+    };
+    setLocalRules((prev) => [...prev, formatted]);
+    appendLog(`Regla registrada: [${newRule.fromState}] lee "${newRule.readSymbol}" → escribe "${newRule.writeSymbol}", mueve ${newRule.direction} → va a [${newRule.toState}]`);
+  }, [appendLog]);
+
+  const handleDeleteRule = useCallback((id: string) => {
+    setLocalRules((prev) => prev.filter(r => r.id !== id));
+    appendLog(`Instrucción eliminada de la tabla de control.`);
+  }, [appendLog]);
+
+  // Loop: Automatic solver playback timer
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    const timer = setInterval(() => {
+      handleStepForward();
+    }, speed);
+
+    return () => clearInterval(timer);
+  }, [isPlaying, speed, handleStepForward]);
+
+  // Playback Toggle Handlers
+  const handlePlay = () => {
+    if (instantRun) {
+      // Execute the machine instantly up to 2500 steps to prevent freezing
+      let tempState = { ...runtimeState };
+      const stepConfig = { ...activeConfig, rules: localRules };
+      const batchLogs: string[] = [];
+      const batchHistory: StepHistory[] = [];
+      let limit = 2500;
+      
+      batchLogs.push(`⚡ Iniciando cálculo instantáneo (Límite: ${limit} operaciones)...`);
+      
+      while (
+        !['accepted', 'rejected', 'halted', 'error'].includes(tempState.status) && 
+        limit > 0
+      ) {
+        const prev = tempState;
+        const next = stepMachine(prev, stepConfig);
+        
+        batchHistory.push({
+          tape: { ...prev.tape },
+          headPosition: prev.headPosition,
+          currentState: prev.currentState,
+          stepCount: prev.stepCount,
+          status: prev.status,
+          lastRuleId: prev.lastRuleId,
+          lastDirection: prev.lastDirection,
+        });
+
+        const currentSymbol = prev.tape[prev.headPosition] ?? activeConfig.blankSymbol;
+        const matchedRule = localRules.find(
+          (r) => r.fromState === prev.currentState && r.readSymbol === currentSymbol
+        );
+
+        if (matchedRule) {
+          batchLogs.push(
+            `Paso ${next.stepCount}: [${prev.currentState}] lee "${currentSymbol}" → escribe "${matchedRule.writeSymbol}" → va a [${matchedRule.toState}]`
+          );
+        }
+        
+        tempState = next;
+        limit--;
+      }
+
+      if (limit === 0) {
+        batchLogs.push(`⚠ Límite de seguridad alcanzado (${2500} pasos). Se detuvo la máquina para evitar un bucle no computable.`);
+        tempState.status = 'rejected';
+      } else {
+        if (tempState.status === 'accepted') {
+          batchLogs.push(`★ ENTRADA ACEPTADA: Resuelto perfectamente en ${tempState.stepCount} pasos.`);
+        } else if (tempState.status === 'rejected') {
+          batchLogs.push(`⚠ ENTRADA RECHAZADA: Proceso culminó en fallo tras ${tempState.stepCount} pasos.`);
+        }
+      }
+
+      setHistory((prev) => [...prev, ...batchHistory]);
+      setRuntimeState(tempState);
+      setLogs((prev) => [...prev, ...batchLogs]);
+    } else {
+      setIsPlaying(true);
+    }
   };
 
-  const handleTapeChange = (newTapeStr: string) => {
-    const newTape = newTapeStr.split("");
-    const updatedConfig = { ...config, tape: newTape };
-    setConfig(updatedConfig);
-    configRef.current = updatedConfig;
-    // Solo resetear si la máquina no ha ejecutado pasos
-    if (machineState.stepCount === 0 && !machineState.isRunning) {
-      reset(updatedConfig);
-    }
+  const handlePause = () => {
+    setIsPlaying(false);
   };
 
   return (
-    <div className="min-h-screen bg-[#EBEAE6] text-black font-sans selection:bg-black selection:text-white">
-      <Header />
-
-      <main className="max-w-450 mx-auto p-8 flex flex-col gap-8">
-        <div className="flex flex-col gap-8">
-          {/* Machine Header */}
-          <section className="bg-white p-6 rounded-xl border border-black/5 shadow-sm space-y-4">
-            <div className="flex justify-between items-start gap-6">
-              <div className="flex-1">
-                <h2 className="text-sm font-medium uppercase tracking-wider text-black/40">
-                  Máquina Activa
-                </h2>
-                <p
-                  className={cn(
-                    "text-2xl font-semibold tracking-tight",
-                    machineState.currentState === "accept" && "text-green-600",
-                    machineState.currentState === "reject" && "text-red-600",
-                    machineState.isHalted &&
-                      machineState.stepCount === 0 &&
-                      "text-orange-600",
-                  )}
-                >
-                  {machineState.isHalted
-                    ? machineState.currentState === "accept"
-                      ? "Cadena Aceptada ✓"
-                      : machineState.currentState === "reject"
-                        ? "Cadena Rechazada ✗"
-                        : machineState.stepCount === 0
-                          ? "Sin regla para comenzar - Verifica tu configuración"
-                          : "Simulación Finalizada"
-                    : "Ejecución del Simulador"}
-                </p>
-              </div>
-
-              {/* Exercise Selector */}
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-bold uppercase text-black/40 tracking-wider">
-                  Seleccionar Ejercicio
-                </label>
-                <select
-                  value={selectedExampleId}
-                  onChange={(e) => handleExampleChange(e.target.value)}
-                  className="min-w-70 px-4 py-2.5 bg-white border-2 border-black/10 rounded-lg font-medium text-sm hover:border-black/30 focus:outline-none focus:ring-2 focus:ring-black/20 transition-all cursor-pointer"
-                >
-                  <option value="">-- Ejercicios Disponibles --</option>
-                  <optgroup label="🎯 Básicos">
-                    <option value="repeat01">Repetir 01</option>
-                    <option value="copyOnes">Copiar 1s</option>
-                    <option value="unaryAddition">Suma Unaria</option>
-                  </optgroup>
-                  <optgroup label="🔢 Números Binarios">
-                    <option value="binaryIncrement">Incremento Binario</option>
-                    <option value="divisibleBy3Binary">
-                      Divisible por 3 (binario)
-                    </option>
-                    <option value="binaryAddition">Suma Binaria</option>
-                    <option value="binaryMultiplication">
-                      Multiplicación Binaria
-                    </option>
-                  </optgroup>
-                  <optgroup label="🔤 Cadenas y Palíndromos">
-                    <option value="palindrome">Palíndromo (a,b)</option>
-                    <option value="palindromeGeneral">
-                      ✨ Palíndromo General (a-z)
-                    </option>
-                    <option value="equalStrings">Cadenas Iguales</option>
-                  </optgroup>
-                  <optgroup label="🧮 Matemáticas Avanzadas">
-                    <option value="divisibleBy3Base10">
-                      Divisible por 3 (base 10)
-                    </option>
-                    <option value="threeEqualLength">
-                      Tres cadenas (aⁿbⁿcⁿ)
-                    </option>
-                    <option value="powersOfTwo">Potencias de 2</option>
-                    <option value="multipliedLengths">
-                      Longitudes Multiplicadas
-                    </option>
-                    <option value="unaryMultiplication">
-                      Multiplicación Unaria
-                    </option>
-                  </optgroup>
-                  <optgroup label="🏆 Busy Beavers">
-                    <option value="busyBeaver3">Busy Beaver 3 Estados</option>
-                    <option value="busyBeaver4">Busy Beaver 4 Estados</option>
-                  </optgroup>
-                </select>
-              </div>
-
+    <div className="min-h-screen bg-bg-base pb-16 font-sans antialiased text-ink">
+      
+      {/* Top Header Deck */}
+      <header className="bg-white border-b border-line py-4 px-6 sticky top-0 z-30">
+        <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row md:items-center justify-between gap-5">
+          
+          <div className="flex items-center gap-3">
+            <div className="p-2 border border-line bg-bg-base text-ink flex items-center justify-center">
+              <BrainCircuit className="w-6 h-6" />
+            </div>
+            <div>
               <div className="flex items-center gap-2">
-                <div className="flex flex-col items-end">
-                  <span className="text-[10px] font-mono text-black/40 uppercase">
-                    Estado
-                  </span>
-                  <span className="font-mono font-medium px-3 py-1 bg-black text-white rounded-sm">
-                    {machineState.currentState}
-                  </span>
-                </div>
-                <div className="flex flex-col items-end border-l border-black/10 pl-4 ml-2">
-                  <span className="text-[10px] font-mono text-black/40 uppercase">
-                    Pasos
-                  </span>
-                  <span className="font-mono font-medium">
-                    {machineState.stepCount}
-                  </span>
-                </div>
+                <h1 className="font-serif font-bold italic text-2xl text-ink tracking-tight">
+                  TuringLab
+                </h1>
               </div>
+              <p className="text-[11px] text-ink/70 font-sans mt-0.5 uppercase tracking-wider font-semibold">
+                Simulador interactivo de autómata determinista de Turing
+              </p>
             </div>
+          </div>
 
-            {selectedExampleId && EXAMPLES[selectedExampleId]?.description && (
-              <div className="p-4 rounded-lg bg-blue-50 border border-blue-200 flex items-start gap-3">
-                <BookOpen size={16} className="text-blue-600 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-blue-900 mb-1">
-                    {EXAMPLES[selectedExampleId].title || selectedExampleId}
-                  </p>
-                  <p className="text-xs text-blue-800 leading-relaxed">
-                    {EXAMPLES[selectedExampleId].description}
-                  </p>
-                </div>
-              </div>
-            )}
+          {/* Catalog Selector Dropdown */}
+          <div className="flex items-center gap-3 bg-[#DFCAEC] border border-line px-4 py-2 shrink-0">
+            <span className="font-serif text-xs font-bold italic text-ink select-none">
+              Programa / Rutina:
+            </span>
+            <select
+              value={exerciseIndex}
+              disabled={isPlaying}
+              onChange={(e) => setExerciseIndex(Number(e.target.value))}
+              className="bg-white border border-line rounded-none outline-none font-sans text-xs font-bold px-3 py-1 cursor-pointer text-ink hover:bg-white/85 transition-colors uppercase tracking-wider"
+            >
+              {EXERCISES.map((ex, idx) => (
+                <option key={ex.id} value={idx}>
+                  {idx + 1}. {ex.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-            {machineState.isHalted && machineState.stepCount === 0 && (
-              <div className="p-4 rounded-lg bg-orange-50 border border-orange-200 flex items-start gap-3">
-                <Info size={18} className="text-orange-600 mt-0.5 shrink-0" />
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold text-orange-900">
-                    No se encontró ninguna regla de transición
-                  </p>
-                  <p className="text-xs text-orange-700 leading-relaxed">
-                    La máquina no tiene una regla definida para el estado{" "}
-                    <strong>"{machineState.currentState}"</strong> leyendo el
-                    símbolo{" "}
-                    <strong>
-                      "
-                      {machineState.tape[machineState.headIndex] ??
-                        config.blankSymbol}
-                      "
-                    </strong>
-                    .
-                  </p>
-                  <p className="text-xs text-orange-600 leading-relaxed pt-1">
-                    {selectedExampleId
-                      ? "Puedes probar con otra entrada o agregar tus propias reglas en la pestaña Reglas."
-                      : "Ve a la pestaña Reglas y agrega una transición apropiada."}
-                  </p>
-                </div>
-              </div>
-            )}
-          </section>
+        </div>
+      </header>
 
-          {/* Two Column Layout */}
-          <div className="flex flex-col lg:flex-row gap-8">
-            {/* Left Column */}
-            <div className="flex-1 flex flex-col gap-8">
-              {/* Tape */}
-              <section className="bg-white rounded-xl border border-black/5 shadow-md overflow-hidden relative">
-                <TapeComponent
-                  state={machineState}
-                  blankSymbol={config.blankSymbol}
-                  lastMove={lastMove}
-                  readIndices={readIndices}
-                />
-
-                {/* Controls */}
-                <div className="px-8 py-6 flex items-center justify-between bg-white border-t border-black/5">
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={toggleRun}
-                      disabled={machineState.isHalted}
-                      className={cn(
-                        "w-12 h-12 rounded-full flex items-center justify-center transition-all",
-                        machineState.isRunning
-                          ? "bg-slate-100 text-black hover:bg-slate-200"
-                          : "bg-black text-white hover:scale-105 active:scale-95 disabled:bg-slate-200",
-                      )}
-                    >
-                      {machineState.isRunning ? (
-                        <Pause size={20} fill="currentColor" />
-                      ) : (
-                        <Play size={20} fill="currentColor" className="ml-1" />
-                      )}
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (!machineState.isRunning && !machineState.isHalted)
-                          stepOnce();
-                      }}
-                      disabled={machineState.isRunning || machineState.isHalted}
-                      className="w-12 h-12 rounded-full border border-black/10 flex items-center justify-center hover:bg-black hover:text-white transition-all disabled:opacity-30"
-                    >
-                      <SkipForward size={20} />
-                    </button>
-                    <button
-                      onClick={() => reset()}
-                      className="w-12 h-12 rounded-full border border-black/10 flex items-center justify-center hover:bg-black hover:text-white transition-all"
-                    >
-                      <RotateCcw size={20} />
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-bold uppercase text-black/30 mb-1">
-                        Velocidad
-                      </span>
-                      <input
-                        type="range"
-                        min="50"
-                        max="2000"
-                        step="50"
-                        value={speed}
-                        onChange={(e) => setSpeed(parseInt(e.target.value))}
-                        className="w-32 accent-black"
-                      />
-                    </div>
-                    <div className="text-xs font-mono w-12 text-right">
-                      {speed}ms
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              {/* Config Tabs */}
-              <section className="bg-white rounded-xl border border-black/5 shadow-sm overflow-hidden flex flex-col h-125">
-                <div className="flex border-b border-black/5">
-                  {[
-                    { id: "rules", label: "Reglas" },
-                    { id: "config", label: "Configuración" },
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id as any)}
-                      className={cn(
-                        "flex-1 py-4 text-xs font-bold uppercase tracking-widest transition-colors",
-                        activeTab === tab.id
-                          ? "bg-black text-white"
-                          : "hover:bg-black/5 text-black/40",
-                      )}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex-1 overflow-y-auto p-6">
-                  <datalist id="states-list">
-                    {Array.from(
-                      new Set([
-                        ...config.transitions.map((t) => t.currentState),
-                        ...config.transitions.map((t) => t.nextState),
-                        "accept",
-                        "reject",
-                        "halt",
-                        "q0",
-                      ]),
-                    ).map((s) => (
-                      <option key={s} value={s} />
-                    ))}
-                  </datalist>
-
-                  {activeTab === "rules" && (
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-medium">Tabla de Transiciones</h3>
-                      </div>
-                      <table className="w-full text-left text-sm border-collapse">
-                        <thead>
-                          <tr className="border-b border-black/5 italic font-serif opacity-50">
-                            <th className="pb-3 px-2 font-normal">Estado</th>
-                            <th className="pb-3 px-2 font-normal">Lee</th>
-                            <th className="pb-3 px-2 font-normal">Escribe</th>
-                            <th className="pb-3 px-2 font-normal">Mueve</th>
-                            <th className="pb-3 px-2 font-normal">Sig.</th>
-                            <th className="pb-3 px-2 font-normal"></th>
-                          </tr>
-                        </thead>
-                        <tbody className="font-mono">
-                          {config.transitions.map((t, i) => (
-                            <tr
-                              key={i}
-                              className="group border-b border-black/5 hover:bg-black/5 transition-colors"
-                            >
-                              <td className="py-2 px-1">
-                                <input
-                                  list="states-list"
-                                  className="w-20 bg-transparent outline-none focus:bg-white focus:ring-1 focus:ring-black font-bold text-blue-700"
-                                  value={t.currentState}
-                                  onChange={(e) =>
-                                    updateTransition(
-                                      i,
-                                      "currentState",
-                                      e.target.value,
-                                    )
-                                  }
-                                />
-                              </td>
-                              <td className="py-2 px-1">
-                                <input
-                                  className="w-8 bg-transparent outline-none focus:bg-white focus:ring-1 focus:ring-black text-center border-x border-black/5"
-                                  value={t.readSymbol}
-                                  onChange={(e) =>
-                                    updateTransition(
-                                      i,
-                                      "readSymbol",
-                                      e.target.value,
-                                    )
-                                  }
-                                />
-                              </td>
-                              <td className="py-2 px-1">
-                                <input
-                                  className="w-8 bg-transparent outline-none focus:bg-white focus:ring-1 focus:ring-black text-center border-x border-black/5"
-                                  value={t.writeSymbol}
-                                  onChange={(e) =>
-                                    updateTransition(
-                                      i,
-                                      "writeSymbol",
-                                      e.target.value,
-                                    )
-                                  }
-                                />
-                              </td>
-                              <td className="py-2 px-1">
-                                <select
-                                  className="bg-transparent outline-none cursor-pointer font-bold px-1"
-                                  value={t.move}
-                                  onChange={(e) =>
-                                    updateTransition(
-                                      i,
-                                      "move",
-                                      e.target.value as any,
-                                    )
-                                  }
-                                >
-                                  <option value="L">L</option>
-                                  <option value="R">R</option>
-                                  <option value="N">N</option>
-                                </select>
-                              </td>
-                              <td className="py-2 px-1">
-                                <input
-                                  list="states-list"
-                                  className="w-20 bg-transparent outline-none focus:bg-white focus:ring-1 focus:ring-black font-medium text-slate-600"
-                                  value={t.nextState}
-                                  onChange={(e) =>
-                                    updateTransition(
-                                      i,
-                                      "nextState",
-                                      e.target.value,
-                                    )
-                                  }
-                                />
-                              </td>
-                              <td className="py-2 px-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button
-                                  onClick={() => removeTransition(i)}
-                                  className="text-red-500 hover:text-red-700"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-
-                  {activeTab === "config" && (
-                    <div className="space-y-6">
-                      {selectedExampleId && (
-                        <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
-                          <div className="flex items-start gap-2">
-                            <BookOpen
-                              size={16}
-                              className="text-blue-600 mt-0.5 shrink-0"
-                            />
-                            <div className="space-y-2">
-                              <p className="text-sm font-bold text-blue-900">
-                                Ejercicio activo:{" "}
-                                {EXAMPLES[selectedExampleId]?.title}
-                              </p>
-                              <p className="text-[11px] text-blue-700 leading-relaxed">
-                                <strong>✨ Entrada libre:</strong> Puedes
-                                escribir cualquier cadena para experimentar. Los
-                                cambios se aplican automáticamente antes de
-                                ejecutar.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="p-4 rounded-lg bg-green-50 border border-green-200">
-                        <div className="flex items-start gap-2">
-                          <Sparkles
-                            size={16}
-                            className="text-green-600 mt-0.5 shrink-0"
-                          />
-                          <div className="space-y-1">
-                            <p className="text-[11px] text-green-800 leading-relaxed">
-                              Los cambios en la cinta se aplican{" "}
-                              <strong>automáticamente</strong> cuando la máquina
-                              aún no ha ejecutado pasos. Si ya ejecutó, reinicia
-                              primero.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Toggle Modo Dinámico */}
-                      <div className="p-4 rounded-lg bg-purple-50 border border-purple-200">
-                        <div className="flex items-start gap-3">
-                          <Sparkles
-                            size={16}
-                            className="text-purple-600 mt-0.5 shrink-0"
-                          />
-                          <div className="flex-1 space-y-2">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-sm font-bold text-purple-900">
-                                  🎨 Modo Transiciones Dinámicas
-                                </p>
-                                <p className="text-[10px] text-purple-700 leading-relaxed mt-1">
-                                  Genera automáticamente las reglas basadas en
-                                  los símbolos de tu entrada.
-                                </p>
-                              </div>
-                              <button
-                                onClick={() => setDynamicMode(!dynamicMode)}
-                                className={cn(
-                                  "relative w-14 h-7 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2",
-                                  dynamicMode ? "bg-purple-600" : "bg-gray-300",
-                                )}
-                              >
-                                <span
-                                  className={cn(
-                                    "absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-200",
-                                    dynamicMode
-                                      ? "translate-x-7"
-                                      : "translate-x-0",
-                                  )}
-                                />
-                              </button>
-                            </div>
-                            {dynamicMode && (
-                              <div className="p-2 bg-purple-100 rounded-lg border border-purple-300">
-                                <p className="text-[10px] text-purple-800 leading-relaxed">
-                                  ✅ <strong>Activo:</strong> Transiciones
-                                  generadas automáticamente.{" "}
-                                  <span className="text-[9px] text-purple-600">
-                                    {config.transitions.length} reglas actuales.
-                                  </span>
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase opacity-40">
-                          Contenido Inicial de la Cinta
-                        </label>
-                        <input
-                          className="w-full p-4 bg-black/5 rounded-lg font-mono text-base outline-none focus:ring-2 focus:ring-black"
-                          value={config.tape.join("")}
-                          onChange={(e) => handleTapeChange(e.target.value)}
-                          placeholder={getPlaceholderForExample(
-                            selectedExampleId,
-                          )}
-                        />
-                        {selectedExampleId &&
-                          (() => {
-                            const v = validateInput(
-                              config.tape.join(""),
-                              selectedExampleId,
-                            );
-                            if (v.warning)
-                              return (
-                                <div className="p-3 rounded-lg bg-yellow-50 border border-yellow-200 flex items-start gap-2">
-                                  <Info
-                                    size={14}
-                                    className="text-yellow-600 mt-0.5 shrink-0"
-                                  />
-                                  <p className="text-[10px] text-yellow-800 leading-relaxed">
-                                    {v.warning}
-                                  </p>
-                                </div>
-                              );
-                            return null;
-                          })()}
-                        <p className="text-[10px] text-slate-500 leading-relaxed">
-                          {getHelpTextForExample(selectedExampleId)}
-                        </p>
-                      </div>
-
-                      {selectedExampleId &&
-                        getQuickExamples(selectedExampleId).length > 0 && (
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-bold uppercase opacity-40">
-                              Pruebas Rápidas
-                            </label>
-                            <div className="flex flex-wrap gap-2">
-                              {getQuickExamples(selectedExampleId).map(
-                                (example, idx) => (
-                                  <button
-                                    key={idx}
-                                    onClick={() => handleTapeChange(example)}
-                                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg font-mono text-xs transition-all"
-                                  >
-                                    {example}
-                                  </button>
-                                ),
-                              )}
-                            </div>
-                            <p className="text-[10px] text-slate-500 leading-relaxed">
-                              Haz clic en un ejemplo para cargarlo
-                              automáticamente
-                            </p>
-                          </div>
-                        )}
-
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase opacity-40">
-                          Símbolo Blanco (Blank)
-                        </label>
-                        <input
-                          className="w-full p-4 bg-black/5 rounded-lg font-mono outline-none focus:ring-2 focus:ring-black"
-                          value={config.blankSymbol}
-                          onChange={(e) =>
-                            setConfig((prev) => ({
-                              ...prev,
-                              blankSymbol: e.target.value,
-                            }))
-                          }
-                          placeholder="_"
-                        />
-                      </div>
-
-                      {(machineState.stepCount > 0 ||
-                        machineState.isRunning) && (
-                        <div className="p-4 rounded-lg bg-amber-50 border border-amber-200">
-                          <div className="flex items-start gap-2">
-                            <Info
-                              size={16}
-                              className="text-amber-600 mt-0.5 shrink-0"
-                            />
-                            <div className="space-y-2">
-                              <p className="text-[11px] text-amber-800 leading-relaxed">
-                                La máquina ya ha ejecutado pasos. Para cambiar
-                                la entrada debes reiniciarla.
-                              </p>
-                              <button
-                                onClick={() => reset()}
-                                className="w-full flex items-center justify-center gap-2 py-2 bg-amber-600 text-white rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-amber-700 transition-all"
-                              >
-                                <RotateCcw size={14} /> Reiniciar Máquina
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </section>
+      {/* Main Container Layout */}
+      <main className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+        
+        {/* Dynamic Exercise Details Banner */}
+        <div className="bg-white border border-line p-6 md:p-8 mb-6 relative">
+          <div className="relative z-10 max-w-4xl">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 border border-line bg-[#DFCAEC] text-ink text-[10px] font-bold font-mono tracking-wide uppercase mb-3">
+              <Sparkle className="w-3.5 h-3.5 text-accent fill-accent/20" />
+              Especificación Teórica
             </div>
+            
+            <h2 className="font-serif font-bold italic text-2xl md:text-3xl tracking-tight mb-2 text-ink">
+              {activeConfig.name}
+            </h2>
+            
+            <p className="font-sans text-xs text-ink/80 leading-relaxed max-w-3xl mb-4 font-normal">
+              {activeConfig.description}
+            </p>
 
-            {/* Right Column: State Graph */}
-            <div className="lg:w-150 xl:w-175">
-              <section className="bg-white p-8 rounded-xl border border-black/5 shadow-sm space-y-6 sticky top-24">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Network size={20} />
-                    <h3 className="text-sm font-bold uppercase tracking-[0.2em]">
-                      Diagrama de Estados
-                    </h3>
-                  </div>
-                  <div className="flex items-center gap-2 text-[10px] text-black/40 uppercase font-mono">
-                    <div className="w-2 h-2 rounded-full bg-black"></div> Actual
-                    <div className="ml-2 w-2 h-2 rounded-full border border-black border-dashed"></div>{" "}
-                    Inicio
-                  </div>
-                </div>
-                <div className="h-150">
-                  <StateGraph
-                    transitions={config.transitions}
-                    currentState={machineState.currentState}
-                    initialState={config.initialState}
-                  />
-                </div>
-              </section>
+            <div className="bg-bg-base/60 border border-line p-4 text-xs font-sans text-ink leading-relaxed">
+              <strong className="font-serif font-bold italic text-ink block mb-1">Criterio Académico & Funcionamiento:</strong>
+              {activeConfig.educationalExplanation}
             </div>
           </div>
         </div>
+
+        {/* Master Interactive Dashboard: Sidebar-coupled split cockpit */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start mt-6">
+          
+          {/* LEFT: Simulation Cockpit (Tape + Controls + Stepping Logs) (Cols 1-7) */}
+          <div className="lg:col-span-7 space-y-6 flex flex-col">
+            
+            {/* Memory Tape Slot */}
+            <div className="w-full">
+              <TapeVisualizer
+                tape={runtimeState.tape}
+                headPosition={runtimeState.headPosition}
+                blankSymbol={activeConfig.blankSymbol}
+                status={runtimeState.status}
+                onCellChange={handleCellChange}
+                lastDirection={runtimeState.lastDirection}
+              />
+            </div>
+
+            {/* Simulation Controller */}
+            <ControlPanel
+              config={activeConfig}
+              status={runtimeState.status}
+              stepCount={runtimeState.stepCount}
+              speed={speed}
+              onSpeedChange={setSpeed}
+              onPlay={handlePlay}
+              onPause={handlePause}
+              onStepForward={handleStepForward}
+              onStepBackward={handleStepBackward}
+              onReset={handleReset}
+              onClearTape={handleClearTape}
+              onCustomInputLoad={handleCustomInputLoad}
+              canBackward={history.length > 0}
+              canForward={!['accepted', 'rejected', 'halted', 'error'].includes(runtimeState.status)}
+              currentState={runtimeState.currentState}
+              errorMsg={runtimeState.errorMsg}
+              instantRun={instantRun}
+              onInstantRunChange={setInstantRun}
+            />
+
+            {/* Step Trace Terminal Logs */}
+            <div className="bg-white border border-line text-ink p-5 flex flex-col min-h-[300px]">
+              
+              <div className="flex items-center justify-between pb-3 border-b border-line mb-3 select-none">
+                <span className="font-serif font-bold italic text-xs tracking-wider uppercase text-ink flex items-center gap-1.5">
+                  <span className="w-2 h-2 bg-accent"></span>
+                  Trazado de Pasos (System Log)
+                </span>
+                <span className="font-mono text-[9px] text-ink opacity-60">
+                  OPERACIONES: {logs.length}
+                </span>
+              </div>
+
+              {/* Terminal Logs Window */}
+              <div
+                ref={logTerminalRef}
+                className="flex-1 overflow-y-auto max-h-[300px] space-y-2 pr-2 font-mono text-[10px] text-ink/90 leading-relaxed scrollbar-thin"
+              >
+                {logs.map((log, idx) => (
+                  <div
+                    key={`log-${idx}`}
+                    className={`pb-1 border-b border-dashed border-line/30 last:border-0 ${
+                      log.startsWith('★')
+                        ? 'text-accent font-bold'
+                        : log.startsWith('⚠')
+                        ? 'text-accent border-l-2 border-accent pl-1.5'
+                        : log.startsWith('⚡')
+                        ? 'text-ink font-bold font-serif italic'
+                        : 'text-ink/85'
+                    }`}
+                  >
+                    <span className="text-accent/60 mr-1.5 select-none font-sans font-bold">
+                      &gt;&gt;
+                    </span>
+                    {log}
+                  </div>
+                ))}
+                {logs.length === 0 && (
+                  <div className="text-ink/50 text-center py-16 font-mono text-[10px]">
+                    Inicia el autómata para empezar a trazar logs de ejecución.
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-3 pt-3 border-t border-line flex justify-between text-[9px] font-mono text-ink/60 uppercase select-none">
+                <span>Doble clic para alterar cinta en pausa</span>
+                <span>TuringLab v1.0</span>
+              </div>
+            </div>
+
+          </div>
+
+          {/* RIGHT: Automaton Brain (State Graph + Active Transition Rule spreadsheet) (Cols 8-12) */}
+          <div className="lg:col-span-5 space-y-6 flex flex-col">
+            
+            {/* SVG Interactive Node Automaton diagram */}
+            <div className="w-full">
+              <StateGraph
+                config={activeConfig}
+                currentState={runtimeState.currentState}
+                lastRuleId={runtimeState.lastRuleId}
+              />
+            </div>
+
+            {/* Highlighted transition instruction table */}
+            <div className="w-full">
+              <RulesTable
+                config={activeConfig}
+                rules={localRules}
+                currentState={runtimeState.currentState}
+                currentSymbol={runtimeState.tape[runtimeState.headPosition] ?? activeConfig.blankSymbol}
+                activeRuleId={runtimeState.lastRuleId}
+                onAddRule={handleAddCustomRule}
+                onDeleteRule={handleDeleteRule}
+              />
+            </div>
+
+          </div>
+
+        </div>
+
       </main>
 
-      <footer className="max-w-350 mx-auto p-8 pt-0 flex justify-between items-center text-[10px] font-mono text-black/30 uppercase tracking-[0.3em]">
-        <span>© 2026 Maquina Turing - Universidad Tecnologica de Pereira</span>
+      {/* Corporate Simple Academic Footer */}
+      <footer className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 mt-12 pt-6 border-t border-line flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs font-sans text-ink uppercase tracking-wider font-semibold select-none">
+        <div>
+          <p className="font-serif italic text-sm font-bold text-ink lowercase first-letter:uppercase">© 2026</p>
+          <p className="text-[10px] text-ink/60 mt-0.5 normal-case font-mono">Basado en el diseño determinista de Turing.</p>
+        </div>
+        <div className="flex gap-4 items-center justify-center sm:justify-start font-mono text-[10px]">
+          <span className="flex items-center gap-1 border border-line px-2 py-0.5 bg-white">
+            <Scale className="w-3.5 h-3.5" /> Lizeth Victoria - Tatiana Millan
+          </span>
+          <span className="w-px h-3 bg-line"></span>
+          <span>INGENIERÍA DE SISTEMAS</span>
+        </div>
       </footer>
+
+      {/* Dynamic Results Overlay Modal (Estilo Coqueto con Tonos Morados) */}
+      {showResultModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2C143F]/75 backdrop-blur-xs animate-fade-in">
+          <div className="relative w-full max-w-xl bg-gradient-to-br from-[#FFF5F8] to-[#F3EBFA] border-4 border-[#8D36AC] p-6 md:p-8 shadow-2xl transition-transform transform scale-100 flex flex-col gap-4 select-none text-ink">
+            
+            {/* Absolute close button in top corner */}
+            <div className="absolute top-3 right-3 flex items-center gap-2">
+              <button 
+                onClick={() => setShowResultModal(false)}
+                className="w-7 h-7 flex items-center justify-center border border-line bg-white hover:bg-[#CEB7DF] text-ink text-sm font-bold transition-all duration-150 rounded-none cursor-pointer"
+                title="Cerrar modal e inspeccionar"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="absolute -top-3 -left-3 bg-[#8D36AC] text-white p-2.5 border border-line flex items-center justify-center shadow-md">
+              <Sparkles className="w-5 h-5 text-white animate-spin" />
+            </div>
+
+            {/* Content according to machine status */}
+            {runtimeState.status === 'accepted' ? (
+              <div className="flex flex-col gap-4 text-center items-center mt-2">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 border border-line bg-[#DFCAEC] text-[#8D36AC] text-[10.5px] font-bold font-mono tracking-wide uppercase">
+                  <Heart className="w-3.5 h-3.5 fill-accent animate-pulse" />
+                  CÁLCULO RESUELTO
+                </div>
+
+                <div className="p-4 bg-[#8D36AC] text-white rounded-full border-2 border-line shadow-lg relative">
+                  <Award className="w-12 h-12" strokeWidth={2} />
+                  <span className="absolute -top-1 -right-1 bg-[#FFF5F8] text-[#8D36AC] text-[9px] font-bold px-1.5 py-0.5 border border-line rounded-none uppercase font-mono animate-pulse">¡ÉXITO!</span>
+                </div>
+
+                <h3 className="font-serif font-black italic text-2xl text-[#2C143F] tracking-tight">
+                  ¡Entrada Aceptada con Éxito! ✨
+                </h3>
+
+                <p className="font-sans text-xs md:text-sm text-ink/80 max-w-md leading-relaxed">
+                  La cinta de memoria es <span className="font-bold underline text-[#8D36AC]">formalmente válida</span>. La máquina de Turing determinista recorrió la secuencia de forma correcta satisfaciendo todas las transiciones.
+                </p>
+
+                <div className="w-full bg-white border border-[#CEB7DF] p-3.5 font-mono text-[10.5px] grid grid-cols-2 gap-3.5 text-left">
+                  <div>
+                    <span className="block text-ink/50 text-[9px] uppercase font-bold">Estado Final</span>
+                    <span className="font-black text-xs text-[#8D36AC]">{runtimeState.currentState}</span>
+                  </div>
+                  <div>
+                    <span className="block text-ink/50 text-[9px] uppercase font-bold">Pasos Computados</span>
+                    <span className="font-black text-xs text-[#8D36AC]">{runtimeState.stepCount} pasos ejecutados</span>
+                  </div>
+                  <div className="col-span-2 border-t border-dashed border-[#CEB7DF] pt-2">
+                    <span className="block text-ink/50 text-[9px] uppercase font-bold">Último Símbolo en Cabezal</span>
+                    <span className="font-black text-xs text-ink/90 font-mono">"{runtimeState.tape[runtimeState.headPosition] ?? activeConfig.blankSymbol}" en posición [{runtimeState.headPosition}]</span>
+                  </div>
+                </div>
+
+                <p className="text-[10px] text-[#8D36AC]/80 italic">Puedes cerrar esta ventana de éxito en la esquina para inspeccionar la cinta, el historial o revisar el recorrido del grafo en el fondo.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4 text-center items-center mt-2">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 border border-line bg-red-100 text-red-600 text-[10.5px] font-bold font-mono tracking-wide uppercase">
+                  ✕ CATASTRO ALGORÍTMICO
+                </div>
+
+                <div className="p-4 bg-red-500 text-white rounded-full border-2 border-line shadow-lg">
+                  <X className="w-12 h-12" strokeWidth={3} />
+                </div>
+
+                <h3 className="font-serif font-black italic text-2xl text-red-900 tracking-tight">
+                  Entrada de Cinta Rechazada 🥀
+                </h3>
+
+                <div className="font-sans text-xs text-red-950 bg-red-50 border border-red-200 p-3 max-w-md leading-relaxed font-mono">
+                  {runtimeState.errorMsg || 'La máquina de Turing detuvo su ejecución debido a la ausencia de reglas válidas para avanzar en este estado o por ingresar a un estado de descarte no autorizado.'}
+                </div>
+
+                <div className="w-full bg-white border border-red-200 p-3.5 font-mono text-[10.5px] grid grid-cols-2 gap-3 text-left">
+                  <div>
+                    <span className="block text-red-900/60 text-[9px] uppercase font-bold">Estado de Fallo</span>
+                    <span className="font-black text-xs text-red-700">{runtimeState.currentState}</span>
+                  </div>
+                  <div>
+                    <span className="block text-red-900/60 text-[9px] uppercase font-bold">Pasos Computados</span>
+                    <span className="font-black text-xs text-red-700">{runtimeState.stepCount} operaciones</span>
+                  </div>
+                </div>
+
+                <p className="text-[10px] text-red-700/80 italic">¿Prefieres inspeccionar la cinta actual de memoria donde ocurrió el descarte? Cierra el popup para examinar y editar.</p>
+              </div>
+            )}
+
+            {/* Footer buttons for direct action inside the modal */}
+            <div className="mt-2 pt-3 border-t border-line/20 flex flex-col sm:flex-row gap-3 w-full justify-between">
+              <button
+                onClick={() => {
+                  setShowResultModal(false);
+                }}
+                className="flex-1 py-2 px-4 border border-line bg-white hover:bg-[#CEB7DF] text-ink font-mono font-black text-xs uppercase cursor-pointer text-center transition-colors"
+              >
+                Cerrar e Inspeccionar Cinta
+              </button>
+              <button
+                onClick={() => {
+                  handleReset();
+                  setShowResultModal(false);
+                }}
+                className="flex-1 py-2 px-4 border border-line bg-[#8D36AC] hover:bg-[#732B8C] text-white font-mono font-black text-xs uppercase cursor-pointer text-center flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Restablecer Máquina</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

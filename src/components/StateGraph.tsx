@@ -1,228 +1,364 @@
-import { useEffect, useRef, useMemo } from 'react';
-import * as d3 from 'd3';
-import { Transition } from '../types';
+import React, { useMemo } from 'react';
+import { TuringMachineConfig, TransitionRule } from '../types';
 
 interface StateGraphProps {
-  transitions: Transition[];
+  config: TuringMachineConfig;
   currentState: string;
-  initialState: string;
+  lastRuleId?: string;
 }
 
-interface Node extends d3.SimulationNodeDatum {
+interface Node {
   id: string;
-}
-
-interface Link extends d3.SimulationLinkDatum<Node> {
-  source: string;
-  target: string;
+  x: number;
+  y: number;
   label: string;
 }
 
-export default function StateGraph({ transitions, currentState, initialState }: StateGraphProps) {
-  const containerRef = useRef<SVGSVGElement>(null);
+interface Edge {
+  from: string;
+  to: string;
+  labels: string[];
+}
 
-  const { nodes, links } = useMemo(() => {
-    const stateSet = new Set<string>();
-    stateSet.add(initialState);
-    transitions.forEach(t => {
-      stateSet.add(t.currentState);
-      stateSet.add(t.nextState);
-    });
-
-    const nodes: Node[] = Array.from(stateSet).map(id => ({ id }));
+export const StateGraph: React.FC<StateGraphProps> = ({ config, currentState, lastRuleId }) => {
+  // Extract all unique states from the machine's rules and configs
+  const states = useMemo(() => {
+    const list = new Set<string>();
+    list.add(config.initialState);
+    config.acceptStates.forEach(s => list.add(s));
+    config.rejectStates.forEach(s => list.add(s));
     
-    // Group transitions by source/target to avoid overlapping lines
-    const linkMap = new Map<string, string[]>();
-    transitions.forEach(t => {
-      const key = `${t.currentState}->${t.nextState}`;
-      const label = `${t.readSymbol}→${t.writeSymbol},${t.move}`;
-      if (!linkMap.has(key)) linkMap.set(key, []);
-      linkMap.get(key)!.push(label);
-    });
-
-    const links: Link[] = Array.from(linkMap.entries()).map(([key, labels]) => {
-      const [source, target] = key.split('->');
-      return {
-        source,
-        target,
-        label: labels.join(' | ')
-      };
-    });
-
-    return { nodes, links };
-  }, [transitions, initialState]);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    // Calculate "levels" for nodes to create a horizontal flow
-    const levels: Record<string, number> = {};
-    const queue: [string, number][] = [[initialState, 0]];
-    const visited = new Set<string>();
-
-    while (queue.length > 0) {
-      const [id, level] = queue.shift()!;
-      if (visited.has(id)) continue;
-      visited.add(id);
-      levels[id] = level;
-
-      transitions.filter(t => t.currentState === id).forEach(t => {
-        if (!visited.has(t.nextState)) {
-          queue.push([t.nextState, level + 1]);
-        }
-      });
+    // Add states found in rules
+    let activeRules = config.rules;
+    if (config.generateRulesForAlphabet) {
+      // For general palindrome, simulate standard alphabet to draw a neat reference graph
+      const dummyAlphabet = ['a', 'b', '_'];
+      activeRules = config.generateRulesForAlphabet(dummyAlphabet, config.blankSymbol);
     }
 
-    // Assign level 0 to unvisited nodes just in case
-    nodes.forEach(n => {
-      if (levels[n.id] === undefined) levels[n.id] = 0;
+    activeRules.forEach(r => {
+      list.add(r.fromState);
+      list.add(r.toState);
     });
 
-    const svg = d3.select(containerRef.current);
-    svg.selectAll("*").remove();
+    return Array.from(list);
+  }, [config]);
 
-    const width = 600;
-    const height = 400;
-    
-    const simulation = d3.forceSimulation<Node>(nodes)
-      .force("link", d3.forceLink<Node, Link>(links).id(d => d.id).distance(120))
-      .force("charge", d3.forceManyBody().strength(-1000))
-      .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("x", d3.forceX<Node>(d => {
-        const level = levels[d.id] || 0;
-        return 100 + level * 150;
-      }).strength(0.5))
-      .force("y", d3.forceY(height / 2).strength(0.1))
-      .force("collision", d3.forceCollide().radius(60))
-      .alphaDecay(0.05);
+  // Generate perfect coordinates for the node layout using structured circular positioning
+  const nodes = useMemo<Node[]>(() => {
+    const total = states.length;
+    const width = 360;
+    const height = 300;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const radius = Math.min(width, height) * 0.38;
 
-    // Arrow marker definition
-    svg.append("defs").append("marker")
-      .attr("id", "arrowhead")
-      .attr("viewBox", "-0 -5 10 10")
-      .attr("refX", 25)
-      .attr("refY", 0)
-      .attr("orient", "auto")
-      .attr("markerWidth", 8)
-      .attr("markerHeight", 8)
-      .attr("xoverflow", "visible")
-      .append("svg:path")
-      .attr("d", "M 0,-5 L 10 ,0 L 0,5")
-      .attr("fill", "#999")
-      .style("stroke", "none");
+    return states.map((state, index) => {
+      // Better layouts: we can separate known accept/reject states to the bottom or corners
+      let x = centerX;
+      let y = centerY;
+      
+      if (total === 1) {
+        x = centerX;
+        y = centerY;
+      } else if (state === 'q_accept') {
+        x = centerX - 100;
+        y = height - 45;
+      } else if (state === 'q_reject') {
+        x = centerX + 100;
+        y = height - 45;
+      } else if (state === config.initialState) {
+        x = 45;
+        y = centerY - 20;
+      } else {
+        const angle = (index / (total - (config.acceptStates.includes('q_accept') ? 1 : 0))) * 2 * Math.PI;
+        x = centerX + radius * Math.cos(angle);
+        y = centerY + radius * Math.sin(angle) - 15;
+      }
 
-    const linkContainer = svg.append("g");
-    const nodeContainer = svg.append("g");
+      // Constrain inside bounds
+      x = Math.max(30, Math.min(width - 30, x));
+      y = Math.max(30, Math.min(height - 35, y));
 
-    const link = linkContainer.selectAll(".link")
-      .data(links)
-      .enter().append("path")
-      .attr("class", "link")
-      .attr("stroke", "#ccc")
-      .attr("stroke-width", 2)
-      .attr("fill", "none")
-      .attr("marker-end", "url(#arrowhead)");
+      return {
+        id: state,
+        label: state,
+        x,
+        y
+      };
+    });
+  }, [states, config]);
 
-    const linkLabel = linkContainer.selectAll(".link-label-group")
-      .data(links)
-      .enter().append("g")
-      .attr("class", "link-label-group");
+  // Group duplicate edges to prevent visual clutter
+  const edges = useMemo<Edge[]>(() => {
+    let activeRules = config.rules;
+    if (config.generateRulesForAlphabet) {
+      const dummyAlphabet = ['a', 'b', '_'];
+      activeRules = config.generateRulesForAlphabet(dummyAlphabet, config.blankSymbol);
+    }
 
-    linkLabel.append("rect")
-      .attr("fill", "white")
-      .attr("rx", 2)
-      .attr("ry", 2);
+    const map = new Map<string, string[]>();
 
-    linkLabel.append("text")
-      .attr("font-size", "10px")
-      .attr("fill", "#666")
-      .attr("font-family", "monospace")
-      .attr("text-anchor", "middle")
-      .text(d => d.label);
-
-    const node = nodeContainer.selectAll(".node")
-      .data(nodes)
-      .enter().append("g")
-      .attr("class", "node");
-
-    node.append("circle")
-      .attr("r", 20)
-      .attr("fill", d => d.id === currentState ? "#000" : "#fff")
-      .attr("stroke", "#000")
-      .attr("stroke-width", 2);
-
-    // Double circle for initial state or accept/reject
-    node.filter(d => d.id === initialState)
-      .append("circle")
-      .attr("r", 24)
-      .attr("fill", "none")
-      .attr("stroke", "#000")
-      .attr("stroke-width", 1)
-      .attr("stroke-dasharray", "2,2");
-
-    node.append("text")
-      .attr("dy", 4)
-      .attr("text-anchor", "middle")
-      .attr("font-size", "10px")
-      .attr("font-weight", "bold")
-      .attr("fill", d => d.id === currentState ? "#fff" : "#000")
-      .text(d => d.id);
-
-    simulation.on("tick", () => {
-      link.attr("d", d => {
-        const source = d.source as unknown as Node;
-        const target = d.target as unknown as Node;
-        
-        if (source.id === target.id) {
-          // Self-loop
-          const x = source.x || 0;
-          const y = source.y || 0;
-          const dr = 30;
-          return `M ${x+10},${y-15} A ${dr},${dr} 0 1,1 ${x+20},${y}`;
-        }
-        
-        return `M ${source.x},${source.y} L ${target.x},${target.y}`;
-      });
-
-      linkLabel
-        .attr("transform", d => {
-          const source = d.source as unknown as Node;
-          const target = d.target as unknown as Node;
-          let x, y;
-          if (source.id === target.id) {
-            x = (source.x || 0) + 40;
-            y = (source.y || 0) - 30;
-          } else {
-            x = ((source.x || 0) + (target.x || 0)) / 2;
-            y = ((source.y || 0) + (target.y || 0)) / 2 - 5;
-          }
-          return `translate(${x},${y})`;
-        });
-
-      linkLabel.selectAll("rect")
-        .each(function() {
-          const element = this as SVGRectElement;
-          const g = d3.select(element.parentNode as SVGGElement);
-          const text = g.select("text").node() as SVGTextElement;
-          const bbox = text.getBBox();
-          d3.select(element)
-            .attr("x", bbox.x - 2)
-            .attr("y", bbox.y - 2)
-            .attr("width", bbox.width + 4)
-            .attr("height", bbox.height + 4);
-        });
-
-      node.attr("transform", d => `translate(${d.x},${d.y})`);
+    activeRules.forEach(r => {
+      const key = `${r.fromState}->${r.toState}`;
+      const label = `${r.readSymbol}→${r.writeSymbol},${r.direction}`;
+      
+      if (!map.has(key)) {
+        map.set(key, []);
+      }
+      map.get(key)!.push(label);
     });
 
-    return () => {
-      simulation.stop();
-    };
-  }, [nodes, links, currentState, initialState]);
+    const list: Edge[] = [];
+    map.forEach((labels, key) => {
+      const [from, to] = key.split('->');
+      list.push({ from, to, labels });
+    });
+
+    return list;
+  }, [config]);
+
+  // Find node by state name helper
+  const findNode = (id: string) => nodes.find(n => n.id === id);
 
   return (
-    <div className="w-full h-full bg-[#fdfdfd] border border-black/5 rounded-lg overflow-hidden flex items-center justify-center">
-      <svg ref={containerRef} width="800" height="600" viewBox="0 0 600 400" className="max-w-full h-auto" />
+    <div className="bg-white border border-line p-5 h-full flex flex-col">
+      <div className="flex items-center justify-between mb-3">
+        <h3 id="graph-title" className="font-serif font-bold italic text-ink text-base flex items-center gap-2">
+          Diagrama de Estados
+        </h3>
+        <span className="font-mono text-[9px] bg-[#DFCAEC] border border-line text-ink px-2 py-0.5 select-none uppercase font-bold">
+          {states.length} Estados
+        </span>
+      </div>
+
+      <p className="text-[11px] text-ink/75 mb-4 font-sans leading-relaxed">
+        Visualización de transiciones y flujos. El círculo ilustrado en naranja completo representa el estado actual de cómputo.
+      </p>
+
+      {/* SVG Canvas with high DPI scaling */}
+      <div className="relative flex-1 min-h-[300px] border border-line bg-[#F1E4FA] flex items-center justify-center overflow-hidden">
+        <svg
+          viewBox="0 0 360 300"
+          className="w-full h-full max-h-[340px]"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {/* Arrow markers definition for lines */}
+          <defs>
+            <marker
+              id="arrow"
+              viewBox="0 0 10 10"
+              refX="16"
+              refY="5"
+              markerWidth="6"
+              markerHeight="6"
+              orient="auto-start-reverse"
+            >
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#2C143F" />
+            </marker>
+            <marker
+              id="arrow-active"
+              viewBox="0 0 10 10"
+              refX="16"
+              refY="5"
+              markerWidth="6"
+              markerHeight="6"
+              orient="auto-start-reverse"
+            >
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#8D36AC" />
+            </marker>
+            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+          </defs>
+
+          {/* Draw Transitions (Edges) */}
+          {edges.map((edge, idx) => {
+            const startNode = findNode(edge.from);
+            const endNode = findNode(edge.to);
+
+            if (!startNode || !endNode) return null;
+
+            const isSelfLoop = edge.from === edge.to;
+            const isActiveTransition = currentState === edge.from;
+
+            // Draw line or curved path
+            if (isSelfLoop) {
+              const x = startNode.x;
+              const y = startNode.y - 18;
+              
+              // Squeeze label text if too long
+              const joinedLabel = edge.labels.slice(0, 2).join(' | ') + (edge.labels.length > 2 ? '...' : '');
+
+              return (
+                <g key={`loop-${idx}`} className="opacity-90 transition-all duration-150">
+                  <path
+                    d={`M ${x - 5} ${y + 3} C ${x - 22} ${y - 32}, ${x + 22} ${y - 32}, ${x + 5} ${y + 3}`}
+                    fill="none"
+                    stroke={isActiveTransition ? '#8D36AC' : '#2C143F'}
+                    strokeWidth={isActiveTransition ? 2 : 1}
+                    markerEnd={`url(#${isActiveTransition ? 'arrow-active' : 'arrow'})`}
+                  />
+                  <text
+                    x={x}
+                    y={y - 32}
+                    className="font-mono text-[9px] fill-ink font-bold"
+                    textAnchor="middle"
+                  >
+                    {joinedLabel}
+                  </text>
+                </g>
+              );
+            } else {
+              // Draw line between nodes
+              const dx = endNode.x - startNode.x;
+              const dy = endNode.y - startNode.y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              
+              // Curve slightly so bidirectional lines don't overlay
+              const mx = (startNode.x + endNode.x) / 2;
+              const my = (startNode.y + endNode.y) / 2;
+              const qx = mx - dy * 0.12; 
+              const qy = my + dx * 0.12;
+
+              const labelOffsetDist = 12;
+              const lx = mx - dy * (labelOffsetDist / dist);
+              const ly = my + dx * (labelOffsetDist / dist);
+
+              const joinedLabel = edge.labels.slice(0, 1).join(', ') + (edge.labels.length > 1 ? '...' : '');
+
+              return (
+                <g key={`edge-${idx}`} className="transition-all duration-150">
+                  <path
+                    d={`M ${startNode.x} ${startNode.y} Q ${qx} ${qy} ${endNode.x} ${endNode.y}`}
+                    fill="none"
+                    stroke={isActiveTransition ? '#8D36AC' : '#2C143F'}
+                    strokeWidth={isActiveTransition ? 1.8 : 1}
+                    markerEnd={`url(#${isActiveTransition ? 'arrow-active' : 'arrow'})`}
+                  />
+                  <rect
+                    x={lx - 15}
+                    y={ly - 6}
+                    width="30"
+                    height="11"
+                    fill="#FFF"
+                    stroke="#2C143F"
+                    strokeWidth="0.5"
+                    className="opacity-95"
+                  />
+                  <text
+                    x={lx}
+                    y={ly + 2}
+                    className="font-mono text-[8px] fill-ink font-bold"
+                    textAnchor="middle"
+                  >
+                    {joinedLabel}
+                  </text>
+                </g>
+              );
+            }
+          })}
+
+          {/* Draw States (Nodes) */}
+          {nodes.map((node) => {
+            const isCurrent = node.id === currentState;
+            const isInitial = node.id === config.initialState;
+            const isAccept = config.acceptStates.includes(node.id);
+            const isReject = config.rejectStates.includes(node.id);
+
+            let borderTheme = 'stroke-line fill-white text-ink';
+            if (isCurrent) {
+              borderTheme = 'stroke-line fill-accent text-white font-bold';
+            } else if (isAccept) {
+              borderTheme = 'stroke-line fill-white text-ink';
+            } else if (isReject) {
+              borderTheme = 'stroke-line fill-[#DFCAEC] text-ink';
+            } else if (isInitial) {
+              borderTheme = 'stroke-line fill-white text-ink';
+            }
+
+            return (
+              <g
+                key={`node-${node.id}`}
+                className="cursor-default select-none transition-all duration-150"
+                transform={`translate(${node.x},${node.y})`}
+              >
+                {/* Visual ripple pulse for active state */}
+                {isCurrent && (
+                  <circle
+                    r="20"
+                    fill="none"
+                    stroke="var(--accent)"
+                    strokeWidth="3"
+                    className="animate-ping opacity-25"
+                  />
+                )}
+                
+                {/* Main state circle */}
+                <circle
+                  r={isCurrent ? "17" : "15"}
+                  className={`stroke-[1.5] transition-all duration-150 ${borderTheme}`}
+                />
+
+                {/* Sub-border for accept states (double circle pattern) */}
+                {isAccept && (
+                  <circle
+                    r="12"
+                    fill="none"
+                    className="stroke-line stroke-[1]"
+                  />
+                )}
+
+                {/* State Name Label */}
+                <text
+                  className="font-mono text-[9px] dy-[3px] text-center pointer-events-none fill-current font-bold"
+                  textAnchor="middle"
+                  y="3"
+                >
+                  {node.label}
+                </text>
+
+                {/* Start Arrow Tag */}
+                {isInitial && (
+                  <g transform="translate(-25, 0)">
+                    <path
+                      d="M -5 0 L 5 0"
+                      stroke="#2C143F"
+                      strokeWidth="1.5"
+                      markerEnd="url(#arrow)"
+                    />
+                    <text
+                      y="-4"
+                      x="-3"
+                      className="font-mono text-[7px] font-bold fill-ink"
+                      textAnchor="middle"
+                    >
+                      INICIO
+                    </text>
+                  </g>
+                )}
+              </g>
+            );
+          })}
+        </svg>
+
+        {/* Legend Overlay */}
+        <div className="absolute bottom-2 left-2 right-2 flex flex-wrap gap-2 items-center justify-center bg-white/95 py-1 px-2 border border-line text-[8.5px] font-mono text-ink">
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 border border-line bg-white"></span> Inicio
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-2.5 h-2.5 bg-accent"></span> Activo ({currentState})
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-2.5 h-2.5 border-2 border-line bg-white"></span> Acepta (Doble)
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-2.5 h-2.5 bg-[#DFCAEC] border border-line"></span> Rechaza
+          </span>
+        </div>
+      </div>
     </div>
   );
-}
+};

@@ -1,1 +1,45 @@
+:root {
+  --bg: #FAF2FC;
+  --ink: #2C143F;
+  --line: #2C143F;
+  --accent: #8D36AC;
+  --f-mono: 'Courier New', Courier, monospace;
+  --f-sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --f-serif: 'Georgia', serif;
+}
+
 @import "tailwindcss";
+
+@theme {
+  --color-bg-base: #FAF2FC;
+  --color-ink: #2C143F;
+  --color-line: #2C143F;
+  --color-accent: #8D36AC;
+  
+  --font-serif: "Georgia", serif;
+  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "Courier New", Courier, monospace;
+}
+
+/* Custom high-density aesthetic parameters */
+body {
+  background-color: var(--bg);
+  color: var(--ink);
+  font-family: var(--f-sans);
+}
+
+/* Scrollbar customizations */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F1E4FA;
+}
+::-webkit-scrollbar-thumb {
+  background: #DFCAEC;
+  border: 1px solid var(--line);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ink);
+}
